@@ -88,7 +88,7 @@ if (needPublish) {
             // Provide artifacts information requited by Maven Central
             pom {
                 name.set("kotlin-cacheable")
-                description.set("Cache everything in function")
+                description.set("Cache everything operations in Kotlin")
                 url.set(projectGitUrl)
 
                 licenses {

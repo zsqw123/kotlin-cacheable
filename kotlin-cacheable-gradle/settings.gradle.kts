@@ -5,3 +5,5 @@ pluginManagement {
         google()
     }
 }
+
+include(":kotlin-cacheable-kcp")
