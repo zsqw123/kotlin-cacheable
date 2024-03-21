@@ -18,10 +18,9 @@ import org.jetbrains.kotlin.name.Name
 
 class CacheableTransformer(
     private val moduleFragment: IrModuleFragment,
-    private val pluginContext: IrPluginContext
+    pluginContext: IrPluginContext
 ) : IrElementTransformer<Any?> {
     private val irBuiltIns = pluginContext.symbols.irBuiltIns
-    private val factory = irBuiltIns.irFactory
 
     fun doTransform() {
         moduleFragment.transformChildren(this, null)
