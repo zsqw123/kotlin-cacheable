@@ -13,6 +13,10 @@ dependencies {
     ksp(D.autoServiceKsp)
     implementation(D.autoService)
     compileOnly(D.compilerEmbeddable)
+
+    testImplementation(D.jUnitJupiterApi)
+    testRuntimeOnly(D.jUnitJupiterEngine)
+    testImplementation(D.compileTesting)
 }
 
 tasks.test {

@@ -1,14 +1,15 @@
 package zsu.cacheable.kcp
 
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
 import org.jetbrains.kotlin.backend.jvm.codegen.AnnotationCodegen.Companion.annotationClass
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.addField
-import org.jetbrains.kotlin.ir.builders.declarations.buildField
+import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.deepCopyWithVariables
 import org.jetbrains.kotlin.ir.types.makeNullable
+import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.parentClassOrNull
@@ -44,17 +45,22 @@ class CacheableTransformer(
             "@Cacheable only supports simple functions, not support for current input: $declaration"
         )
 
-        val copiedFunction = copyOriginFunction(parentClass, declaration)
+        val copiedFunction = moveOriginFunction(parentClass, declaration)
         val backendField = addBackendField(parentClass, declaration)
         rewriteWithCachingLogic(declaration, backendField, copiedFunction)
         return declaration
     }
 
-    private fun copyOriginFunction(
+    private fun moveOriginFunction(
         parentClass: IrClass, originFunction: IrSimpleFunction,
-    ) = originFunction.deepCopyWithVariables().apply {
-        name = name.cachedOriginFunctionName()
-    }.also { parentClass.addMember(it) }
+    ) = parentClass.addFunction {
+        updateFrom(originFunction)
+        name = originFunction.name.cachedOriginFunctionName()
+        returnType = originFunction.returnType
+    }.apply {
+        copyParameterDeclarationsFrom(originFunction)
+        body = originFunction.moveBodyTo(this)
+    }
 
     private fun addBackendField(
         parentClass: IrClass, originFunction: IrFunction,
@@ -72,47 +78,48 @@ class CacheableTransformer(
     ) {
         // modify origin function, use origin function's symbol.
         val builder = originFunction.builder()
-        val fieldInitializer = builder.irExprBody(builder.irGetField(backendField))
+        val fieldInitializer = builder.irGetField(backendField)
 
-        val cachedNowField = factory.buildField {
-            name = Name.identifier("cachedNow")
-            isFinal = true
-            type = originFunction.returnType.makeNullable()
-        }.also { it.initializer = fieldInitializer }
+        val cachedNowVal = builder.scope.createTmpVariable(
+            irType = originFunction.returnType.makeNullable(),
+            nameHint = "cachedNow",
+            initializer = fieldInitializer
+        )
 
         originFunction.body = builder.irBlockBody {
             val thenInitializeBlock = irBlock {
-                val calculatedVal = calculatedVal(copiedFunction)
+                val calculatedVal = calculatedVal(originFunction, copiedFunction)
                 +calculatedVal
-                val getResultField = irGetField(calculatedVal)
-                +irSetField(null, backendField, getResultField)
-                +irReturn(getResultField)
+                val getResultVal = irGet(calculatedVal)
+                +irSetField(null, backendField, getResultVal)
+                +irReturn(getResultVal)
+                +irReturn(irInt(1))
             }
             // get current cached first
-            +cachedNowField
+            +cachedNowVal
             // returns cache if not null
             +irIfNull(
                 irBuiltIns.unitType,
-                irReturn(irGetField(cachedNowField)),
+                irReturn(irGet(cachedNowVal)),
                 thenInitializeBlock,
-                irReturn(irGetField(cachedNowField)),
+                irReturn(irGet(cachedNowVal)),
             )
         }
     }
 
-    private fun calculatedVal(callee: IrSimpleFunction) = factory.buildField {
-        name = Name.identifier("result")
-        isFinal = true
-        type = callee.returnType
-    }.apply {
-        val builder = builder()
-        initializer = builder.irExprBody(builder.callCopiedFunction(callee))
-    }
+    private fun IrBlockBuilder.calculatedVal(
+        callFrom: IrSimpleFunction,
+        callee: IrSimpleFunction,
+    ) = scope.createTemporaryVariable(
+        callCopiedFunction(callFrom, callee),
+        nameHint = "result",
+    )
 
     private fun IrBuilderWithScope.callCopiedFunction(
-        callee: IrSimpleFunction
+        callFrom: IrSimpleFunction,
+        callee: IrSimpleFunction,
     ) = irCall(callee.symbol, callee.returnType).apply {
-        for ((index, irValueParameter) in callee.valueParameters.withIndex()) {
+        for ((index, irValueParameter) in callFrom.valueParameters.withIndex()) {
             putValueArgument(index, irGet(irValueParameter))
         }
     }
