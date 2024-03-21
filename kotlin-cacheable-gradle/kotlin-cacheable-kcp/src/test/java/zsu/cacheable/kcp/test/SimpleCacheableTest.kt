@@ -19,11 +19,12 @@ class SimpleCacheableTest {
         package zsu.test
 
         import zsu.cacheable.Cacheable
+        import zsu.cacheable.CacheMode
 
         class CacheableTest {
             private var a = 1
         
-            @Cacheable
+            @Cacheable(cacheMode = CacheMode.NONE)
             fun foo(): Int {
                 val a = a + 1
                 this.a = a

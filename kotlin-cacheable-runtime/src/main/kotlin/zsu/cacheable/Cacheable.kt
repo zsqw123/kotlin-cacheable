@@ -1,5 +1,27 @@
 package zsu.cacheable
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER)
-annotation class Cacheable
+annotation class Cacheable(val cacheMode: CacheMode = CacheMode.SYNCHRONIZED)
 
+/** refer from [kotlin.LazyThreadSafetyMode] */
+enum class CacheMode {
+    /**
+     * Lock (containing class) is used to ensure that only a single thread can initialize the instance.
+     */
+    SYNCHRONIZED,
+
+    /**
+     * Not support yet.
+     *
+     * Initializer function can be called several times on concurrent access to uninitialized instance value,
+     * but only the first returned value will be used as the value of instance.
+     */
+//    PUBLICATION,
+
+    /**
+     * No locks are used to synchronize an access to the instance value; if the instance is accessed from multiple threads, its behavior is undefined.
+     *
+     * This mode should not be used unless the [Lazy] instance is guaranteed never to be initialized from more than one thread.
+     */
+    NONE,
+}
