@@ -16,6 +16,8 @@ class SimpleCacheableTest {
     fun `simple cacheable`() {
         val kotlinSource = SourceFile.kotlin(
             "Foo.kt", """
+        package zsu.test
+
         import zsu.cacheable.Cacheable
 
         class CacheableTest {
@@ -30,21 +32,28 @@ class SimpleCacheableTest {
         }
 
         class Foo {
-            fun bar() {
-                val testEnvClass = CacheableTest() 
+            fun bar(): Int {
+                val testEnvClass = CacheableTest()
+                testEnvClass.foo()
+                testEnvClass.foo()
+                testEnvClass.foo()
+                return testEnvClass.foo()
             }
         }
     """
         )
 
-        val result = KotlinCompilation().apply {
+        val compilation = KotlinCompilation().apply {
             sources = listOf(kotlinSource)
             compilerPluginRegistrars = listOf(CacheableKCP())
             inheritClassPath = true
             messageOutputStream = System.out
         }.compile()
-        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-        println(result.outputDirectory)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode)
 
+        val fooClass = compilation.classLoader.loadClass("zsu.test.Foo")
+        val barMethod = fooClass.getMethod("bar")
+        val result = barMethod.invoke(fooClass.newInstance()) as Int
+        Assertions.assertEquals(2, result)
     }
 }
