@@ -74,33 +74,35 @@ class CacheableTransformer(
     }
 
     private fun rewriteWithCachingLogic(
-        originFunction: IrSimpleFunction, backendField: IrField, copiedFunction: IrSimpleFunction,
+        originFunction: IrSimpleFunction,
+        backendField: IrField,
+        copiedFunction: IrSimpleFunction,
     ) {
         // modify origin function, use origin function's symbol.
-        val builder = originFunction.builder()
-        val fieldInitializer = builder.irGetField(backendField)
+        val funcBuilder = originFunction.builder()
+        val functionThisReceiver = originFunction.dispatchReceiverParameter?.let { funcBuilder.irGet(it) }
+        val fieldInitializer = funcBuilder.irGetField(functionThisReceiver, backendField)
 
-        val cachedNowVal = builder.scope.createTmpVariable(
+        val cachedNowVal = funcBuilder.scope.createTmpVariable(
             irType = originFunction.returnType.makeNullable(),
             nameHint = "cachedNow",
             initializer = fieldInitializer
         )
 
-        originFunction.body = builder.irBlockBody {
+        originFunction.body = funcBuilder.irBlockBody {
             val thenInitializeBlock = irBlock {
                 val calculatedVal = calculatedVal(originFunction, copiedFunction)
                 +calculatedVal
                 val getResultVal = irGet(calculatedVal)
-                +irSetField(null, backendField, getResultVal)
+                +irSetField(functionThisReceiver, backendField, getResultVal)
                 +irReturn(getResultVal)
-                +irReturn(irInt(1))
             }
             // get current cached first
             +cachedNowVal
             // returns cache if not null
             +irIfNull(
                 irBuiltIns.unitType,
-                irReturn(irGet(cachedNowVal)),
+                irGet(cachedNowVal),
                 thenInitializeBlock,
                 irReturn(irGet(cachedNowVal)),
             )
@@ -119,6 +121,8 @@ class CacheableTransformer(
         callFrom: IrSimpleFunction,
         callee: IrSimpleFunction,
     ) = irCall(callee.symbol, callee.returnType).apply {
+        extensionReceiver = callFrom.extensionReceiverParameter?.let { irGet(it) }
+        dispatchReceiver = callFrom.dispatchReceiverParameter?.let { irGet(it) }
         for ((index, irValueParameter) in callFrom.valueParameters.withIndex()) {
             putValueArgument(index, irGet(irValueParameter))
         }
@@ -130,5 +134,4 @@ class CacheableTransformer(
     class TransformError(message: String) : IllegalArgumentException(message)
 
     private fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns)
-    private fun IrBuilderWithScope.irGetField(field: IrField) = irGetField(null, field)
 }
