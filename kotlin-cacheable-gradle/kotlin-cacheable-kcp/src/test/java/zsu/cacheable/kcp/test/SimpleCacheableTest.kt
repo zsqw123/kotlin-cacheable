@@ -26,19 +26,31 @@ class SimpleCacheableTest {
         
             @Cacheable(cacheMode = CacheMode.NONE)
             fun foo(): Int {
-                val a = a + 1
-                this.a = a
-                return a
+                return ++a
+            }
+
+            private var b = 1
+            @Cacheable
+            fun bar(): Int {
+                return ++b
             }
         }
 
-        class Foo {
-            fun bar(): Int {
+        class Entry {
+            fun foo(): Int {
                 val testEnvClass = CacheableTest()
                 testEnvClass.foo()
                 testEnvClass.foo()
                 testEnvClass.foo()
                 return testEnvClass.foo()
+            }
+
+            fun bar(): Int {
+                val testEnvClass = CacheableTest()
+                testEnvClass.bar()
+                testEnvClass.bar()
+                testEnvClass.bar()
+                return testEnvClass.bar()
             }
         }
     """
@@ -50,11 +62,17 @@ class SimpleCacheableTest {
             inheritClassPath = true
             messageOutputStream = System.out
         }.compile()
+        println(compilation.generatedFiles)
         Assertions.assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode)
 
-        val fooClass = compilation.classLoader.loadClass("zsu.test.Foo")
-        val barMethod = fooClass.getMethod("bar")
-        val result = barMethod.invoke(fooClass.newInstance()) as Int
-        Assertions.assertEquals(2, result)
+        val entryClass = compilation.classLoader.loadClass("zsu.test.Entry")
+        val entry = entryClass.newInstance()
+
+        val fooMethod = entryClass.getMethod("foo")
+        val fooResult = fooMethod.invoke(entry) as Int
+        val barMethod = entryClass.getMethod("bar")
+        val barResult = barMethod.invoke(entry) as Int
+        Assertions.assertEquals(2, fooResult)
+        Assertions.assertEquals(2, barResult)
     }
 }

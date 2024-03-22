@@ -11,17 +11,15 @@ enum class CacheMode {
     SYNCHRONIZED,
 
     /**
-     * Not support yet.
-     *
-     * Initializer function can be called several times on concurrent access to uninitialized instance value,
-     * but only the first returned value will be used as the value of instance.
-     */
-//    PUBLICATION,
-
-    /**
      * No locks are used to synchronize an access to the instance value; if the instance is accessed from multiple threads, its behavior is undefined.
      *
      * This mode should not be used unless the [Lazy] instance is guaranteed never to be initialized from more than one thread.
      */
     NONE,
+}
+
+fun main() {
+    synchronized(1){
+
+    }
 }
