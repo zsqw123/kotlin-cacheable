@@ -27,16 +27,17 @@ class CacheableSymbols(
 
     private val kotlinPackage = createPackage(moduleFragment, "kotlin")
 
-    private val standardKt = createClass(kotlinPackage, "StandardKt")
+    private val standardSynchronizedKt = createClass(kotlinPackage, "StandardKt__SynchronizedKt")
 
-    val synchronizedFun = standardKt.addFunction {
+    val synchronizedFun = standardSynchronizedKt.addFunction {
+        isInline = true
         name = Name.identifier("synchronized")
     }.apply {
         val typeParameter = addTypeParameter("R", irBuiltIns.anyNType)
         val typeParameterType = typeParameter.defaultType
         returnType = typeParameterType
         addValueParameter(Name.identifier("lock"), irBuiltIns.anyType)
-        val blockType = irBuiltIns.functionN(1).typeWith(listOf(typeParameterType, returnType))
+        val blockType = irBuiltIns.functionN(0).typeWith(listOf(typeParameterType))
         addValueParameter(Name.identifier("block"), blockType)
     }
 
