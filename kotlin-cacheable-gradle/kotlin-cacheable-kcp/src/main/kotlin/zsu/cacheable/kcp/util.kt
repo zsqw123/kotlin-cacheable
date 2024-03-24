@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import zsu.cacheable.CacheMode
 import zsu.cacheable.Cacheable
+import zsu.cacheable.kcp.backend.CacheableIRBuilder
 
 const val CACHEABLE_FQN = "zsu.cacheable.Cacheable"
 

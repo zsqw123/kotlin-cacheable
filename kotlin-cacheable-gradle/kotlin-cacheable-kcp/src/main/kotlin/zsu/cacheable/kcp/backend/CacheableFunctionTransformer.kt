@@ -1,4 +1,4 @@
-package zsu.cacheable.kcp
+package zsu.cacheable.kcp.backend
 
 import org.jetbrains.kotlin.ir.builders.IrBlockBuilder
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.declarations.IrField
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrSymbolOwner
+import zsu.cacheable.kcp.builder
 
 abstract class CacheableFunctionTransformer(
     protected val cacheableSymbols: CacheableSymbols,
