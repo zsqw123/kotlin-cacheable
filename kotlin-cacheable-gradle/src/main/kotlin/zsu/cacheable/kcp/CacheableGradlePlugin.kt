@@ -1,10 +1,7 @@
 package zsu.cacheable.kcp
 
 import org.gradle.api.provider.Provider
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
-import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
-import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.*
 
 class CacheableGradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
@@ -16,7 +13,10 @@ class CacheableGradlePlugin : KotlinCompilerPluginSupportPlugin {
     private val artifact = SubpluginArtifact("host.bytedance", "kotlin-cacheable-kcp")
     override fun getPluginArtifact(): SubpluginArtifact = artifact
 
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
-        return true
-    }
+    // sadly, support jvm only currently.
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
+        when (kotlinCompilation.platformType) {
+            KotlinPlatformType.jvm, KotlinPlatformType.androidJvm -> true
+            else -> false
+        }
 }
