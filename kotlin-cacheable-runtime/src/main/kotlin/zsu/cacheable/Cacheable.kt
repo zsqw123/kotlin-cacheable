@@ -16,10 +16,11 @@ enum class CacheMode {
      * This mode should not be used unless the [Lazy] instance is guaranteed never to be initialized from more than one thread.
      */
     NONE,
+
+    /**
+     * Calculate value during compile time. only available for static functions,
+     * e.g. [JvmStatic] marked functions or top-level functions.
+     */
+    COMPILE_TIME,
 }
 
-fun main() {
-    synchronized(1){
-
-    }
-}

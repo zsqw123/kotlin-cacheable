@@ -7,7 +7,11 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.util.kotlinFqName
+import org.jetbrains.org.objectweb.asm.AnnotationVisitor
+import org.jetbrains.org.objectweb.asm.FieldVisitor
 import org.jetbrains.org.objectweb.asm.MethodVisitor
+import org.jetbrains.org.objectweb.asm.tree.AnnotationNode
+import org.jetbrains.org.objectweb.asm.tree.FieldNode
 import org.jetbrains.org.objectweb.asm.tree.MethodNode
 import zsu.cacheable.kcp.CACHEABLE_FQN
 import zsu.cacheable.kcp.common.CacheableFunc
@@ -33,24 +37,26 @@ class CacheableClassGenerator(
         }?.readCacheable() ?: return originMethodVisitor
 
         // validation
-        require(origin is IrSimpleFunction && irClass != null) {
+        require(declaration is IrSimpleFunction && irClass != null) {
             "unsupported function: $name in class: ${irClass?.kotlinFqName}"
         }
-        val cacheableFunc = CacheableFunc(origin)
+        val cacheableFunc = CacheableFunc(declaration)
         cacheableFunc.validation(irClass, declaration)
 
         // create generator
         val originMethodNode = MethodNode(
             access, name, desc, signature, exceptions,
         ).apply { accept(originMethodVisitor) }
-        val generator = CacheableGenerator(CacheableFunc(origin))
+        val generator = CacheableGenerator(CacheableFunc(declaration))
 
         // copy origin function to a new method node
-        val copiedOriginNode = generator.copiedOriginFunc(originMethodNode)
-        copiedOriginNode.attach()
+        generator.copiedOriginFunc(originMethodNode).attach()
+
+        // generate backend
+        generator.generateBackendField(originMethodNode)
 
         // modify origin function
-        val modified = generator.modifiedMethodNode(copiedOriginNode)
+        val modified = generator.modifiedMethodNode(originMethodNode)
         compilerConfiguration.logger.log("Cacheable cached method: ${irClass.name}#$name")
         return modified
     }
@@ -60,4 +66,39 @@ class CacheableClassGenerator(
             null, access, name, desc, signature, exceptions.toTypedArray(),
         )
     )
+
+    private fun FieldNode.attach() = apply {
+        origin.newField(
+            null, access, name, desc, signature, null
+        ).apply {
+
+
+            visitEnd()
+        }
+    }
+}
+
+private fun acceptField(fieldNode: FieldNode, fieldVisitor: FieldVisitor) {
+    fieldNode.visibleAnnotations.acceptEach {
+        fieldVisitor.visitAnnotation(desc, true)
+    }
+    fieldNode.invisibleAnnotations.acceptEach {
+        fieldVisitor.visitAnnotation(desc, false)
+    }
+    fieldNode.visibleTypeAnnotations.acceptEach {
+        fieldVisitor.visitTypeAnnotation(typeRef, typePath, desc, true)
+    }
+    fieldNode.invisibleTypeAnnotations.acceptEach {
+        fieldVisitor.visitTypeAnnotation(typeRef, typePath, desc, false)
+    }
+    fieldNode.attrs.forEach { attr ->
+        fieldVisitor.visitAttribute(attr)
+    }
+    fieldNode.visitEnd()
+}
+
+private inline fun <T : AnnotationNode> List<T>.acceptEach(
+    visitor: T.() -> AnnotationVisitor
+) = forEach { annotationNode ->
+    annotationNode.accept(visitor(annotationNode))
 }

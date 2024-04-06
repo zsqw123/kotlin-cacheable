@@ -7,4 +7,5 @@ annotation class Cacheable(val cacheMode: CacheMode = CacheMode.SYNCHRONIZED)
 enum class CacheMode {
     SYNCHRONIZED,
     NONE,
+    COMPILE_TIME,
 }
