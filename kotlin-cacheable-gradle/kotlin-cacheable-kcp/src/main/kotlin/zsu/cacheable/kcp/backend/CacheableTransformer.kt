@@ -56,6 +56,7 @@ class CacheableTransformer(
             CacheMode.NONE -> NormalTransformer(
                 symbols, declaration, backendField, copiedFunction
             )
+            else -> TODO() // unsupported now :{
         }.doTransform()
         return declaration
     }

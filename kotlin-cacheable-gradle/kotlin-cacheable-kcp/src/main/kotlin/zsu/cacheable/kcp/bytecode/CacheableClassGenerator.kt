@@ -47,16 +47,19 @@ class CacheableClassGenerator(
         val originMethodNode = MethodNode(
             access, name, desc, signature, exceptions,
         ).apply { accept(originMethodVisitor) }
-        val generator = CacheableGenerator(CacheableFunc(declaration))
+        val generator = CacheableGenerator(
+            CacheableFunc(declaration), originMethodNode, cacheable,
+        )
 
         // copy origin function to a new method node
-        generator.copiedOriginFunc(originMethodNode).attach()
+        generator.copiedOriginFunc().attach()
 
         // generate backend
-        generator.generateBackendField(originMethodNode).attach()
+        generator.generateBackendField().attach()
+        generator.createdBoolField().attach()
 
         // modify origin function
-        val modified = generator.modifiedMethodNode(originMethodNode)
+        val modified = generator.modifiedMethodNode()
         compilerConfiguration.logger.log("Cacheable cached method: ${irClass.name}#$name")
         return modified
     }
@@ -76,19 +79,19 @@ class CacheableClassGenerator(
 }
 
 private fun acceptField(fieldNode: FieldNode, fieldVisitor: FieldVisitor) {
-    fieldNode.visibleAnnotations.acceptEach {
+    fieldNode.visibleAnnotations?.acceptEach {
         fieldVisitor.visitAnnotation(desc, true)
     }
-    fieldNode.invisibleAnnotations.acceptEach {
+    fieldNode.invisibleAnnotations?.acceptEach {
         fieldVisitor.visitAnnotation(desc, false)
     }
-    fieldNode.visibleTypeAnnotations.acceptEach {
+    fieldNode.visibleTypeAnnotations?.acceptEach {
         fieldVisitor.visitTypeAnnotation(typeRef, typePath, desc, true)
     }
-    fieldNode.invisibleTypeAnnotations.acceptEach {
+    fieldNode.invisibleTypeAnnotations?.acceptEach {
         fieldVisitor.visitTypeAnnotation(typeRef, typePath, desc, false)
     }
-    fieldNode.attrs.forEach { attr ->
+    fieldNode.attrs?.forEach { attr ->
         fieldVisitor.visitAttribute(attr)
     }
     fieldNode.visitEnd()

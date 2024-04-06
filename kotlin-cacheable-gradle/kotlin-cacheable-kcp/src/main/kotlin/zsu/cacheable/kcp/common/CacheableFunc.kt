@@ -3,6 +3,7 @@ package zsu.cacheable.kcp.common
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.isNullable
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.isInterface
@@ -15,9 +16,10 @@ import kotlin.contracts.contract
 data class CacheableFunc(
     val origin: IrSimpleFunction,
 ) {
-    private val funcIdentifier = origin.name.identifier
-    val copiedOriginFunctionName = Name.identifier("cachedOrigin$funcIdentifier")
-    val backendFieldName = Name.identifier("cachedField$funcIdentifier")
+    private val funcIdentifier = "${origin.name.identifier}_${origin.generateDesc()}"
+    val copiedOriginFunctionName = Name.identifier("cachedOrigin\$$funcIdentifier")
+    val backendFieldName = Name.identifier("cachedField\$$funcIdentifier")
+    val createdFlagFieldName = Name.identifier("cacheCreated\$$funcIdentifier")
 
     @OptIn(ExperimentalContracts::class)
     fun validation(parentClass: IrClass, function: IrFunction) {
@@ -40,4 +42,11 @@ data class CacheableFunc(
         }
         return
     }
+}
+
+private fun IrSimpleFunction.generateDesc(): String {
+    val argDesc = valueParameters.joinToString("_") {
+        it.type.classFqName?.asString().orEmpty()
+    }
+    return argDesc.replace('.', '_')
 }
