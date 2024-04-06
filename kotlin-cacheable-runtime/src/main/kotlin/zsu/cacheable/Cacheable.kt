@@ -18,7 +18,7 @@ enum class CacheMode {
     NONE,
 
     /**
-     * Calculate value during compile time. only available for static functions,
+     * Calculate value during compile time. only available for static functions with no arguments,
      * e.g. [JvmStatic] marked functions or top-level functions.
      */
     COMPILE_TIME,

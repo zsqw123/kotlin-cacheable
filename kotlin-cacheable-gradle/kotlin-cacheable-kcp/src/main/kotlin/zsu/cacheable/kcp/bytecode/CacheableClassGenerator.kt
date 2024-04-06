@@ -53,7 +53,7 @@ class CacheableClassGenerator(
         generator.copiedOriginFunc(originMethodNode).attach()
 
         // generate backend
-        generator.generateBackendField(originMethodNode)
+        generator.generateBackendField(originMethodNode).attach()
 
         // modify origin function
         val modified = generator.modifiedMethodNode(originMethodNode)
@@ -67,14 +67,11 @@ class CacheableClassGenerator(
         )
     )
 
-    private fun FieldNode.attach() = apply {
-        origin.newField(
+    private fun FieldNode.attach() {
+        val newFieldVisitor = origin.newField(
             null, access, name, desc, signature, null
-        ).apply {
-
-
-            visitEnd()
-        }
+        )
+        acceptField(this, newFieldVisitor)
     }
 }
 
