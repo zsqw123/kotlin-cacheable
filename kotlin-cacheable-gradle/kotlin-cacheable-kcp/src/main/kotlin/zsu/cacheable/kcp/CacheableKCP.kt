@@ -26,8 +26,8 @@ import zsu.cacheable.kcp.bytecode.CacheableClassTransform
 class CacheableKCP : CompilerPluginRegistrar() {
     override val supportsK2: Boolean = true
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-//        CacheableIrGenerationExtension.register(this)
-        CacheableClassTransform.register(this)
+        CacheableIrGenerationExtension.register(this)
+        CacheableClassTransform.register(this, configuration)
     }
 }
 
