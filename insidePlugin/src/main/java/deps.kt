@@ -5,7 +5,7 @@ object D {
     private const val KSP_VERSION = "1.9.22-1.0.17"
     const val ksp = "com.google.devtools.ksp:symbol-processing-api:$KSP_VERSION"
 
-    private const val KT_COMPILER = "1.9.20"
+    private const val KT_COMPILER = "1.9.22"
     const val compilerEmbeddable = "org.jetbrains.kotlin:kotlin-compiler-embeddable:$KT_COMPILER"
 
     const val autoService = "com.google.auto.service:auto-service-annotations:1.1.1"
