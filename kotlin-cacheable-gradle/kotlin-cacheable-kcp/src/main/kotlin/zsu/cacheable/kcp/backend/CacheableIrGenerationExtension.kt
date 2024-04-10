@@ -17,9 +17,9 @@ class CacheableIrGenerationExtension : IrGenerationExtension {
     companion object {
         @OptIn(ExperimentalCompilerApi::class)
         fun register(storage: CompilerPluginRegistrar.ExtensionStorage) {
-//            with(storage) {
-//                IrGenerationExtension.registerExtension(CacheableIrGenerationExtension())
-//            }
+            with(storage) {
+                IrGenerationExtension.registerExtension(CacheableIrGenerationExtension())
+            }
         }
     }
 }

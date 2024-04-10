@@ -33,7 +33,7 @@ class CacheableTransformer(
     }
 
     override fun visitFunction(declaration: IrFunction, data: Any?): IrStatement {
-        val symbols = CacheableSymbols(irBuiltIns, moduleFragment)
+        val symbols = CacheableSymbols(irBuiltIns)
         val originLogic = super.visitFunction(declaration, data)
         val cacheable = declaration.annotations.firstOrNull {
             it.annotationClass.kotlinFqName.asString() == CACHEABLE_FQN

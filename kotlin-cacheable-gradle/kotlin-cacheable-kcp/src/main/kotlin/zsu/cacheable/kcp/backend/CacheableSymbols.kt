@@ -1,68 +1,19 @@
 package zsu.cacheable.kcp.backend
 
-import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrBuiltIns
-import org.jetbrains.kotlin.ir.builders.declarations.addFunction
-import org.jetbrains.kotlin.ir.builders.declarations.addTypeParameter
-import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
-import org.jetbrains.kotlin.ir.builders.declarations.buildClass
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrFactory
-import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
-import org.jetbrains.kotlin.ir.declarations.impl.IrExternalPackageFragmentImpl
-import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
-import org.jetbrains.kotlin.ir.types.defaultType
-import org.jetbrains.kotlin.ir.types.typeWith
-import org.jetbrains.kotlin.ir.util.createImplicitParameterDeclarationWithWrappedDescriptor
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 class CacheableSymbols(
     val irBuiltIns: IrBuiltIns,
-    val moduleFragment: IrModuleFragment,
 ) {
-    private val irFactory: IrFactory = IrFactoryImpl
+    private val kotlinJvmInternalUnsafeFqn = FqName("kotlin.jvm.internal.unsafe")
 
-    private val kotlinPackage = createPackage(moduleFragment, "kotlin")
+    val monitorEnter = irBuiltIns.findFunctions(
+        Name.identifier("monitorEnter"), kotlinJvmInternalUnsafeFqn,
+    ).first()
 
-    private val standardSynchronizedKt = createClass(kotlinPackage, "StandardKt__SynchronizedKt")
-
-    val synchronizedFun = standardSynchronizedKt.addFunction {
-        isInline = true
-        name = Name.identifier("synchronized")
-    }.apply {
-        val typeParameter = addTypeParameter("R", irBuiltIns.anyNType)
-        val typeParameterType = typeParameter.defaultType
-        returnType = typeParameterType
-        addValueParameter(Name.identifier("lock"), irBuiltIns.anyType)
-        val blockType = irBuiltIns.functionN(0).typeWith(listOf(typeParameterType))
-        addValueParameter(Name.identifier("block"), blockType)
-    }
-
-    private fun createPackage(moduleFragment: IrModuleFragment, packageName: String): IrPackageFragment =
-        IrExternalPackageFragmentImpl.createEmptyExternalPackageFragment(
-            moduleFragment.descriptor,
-            FqName(packageName)
-        )
-
-    private fun createClass(
-        irPackage: IrPackageFragment,
-        shortName: String,
-    ): IrClass = createClass(irPackage, shortName, ClassKind.CLASS, Modality.FINAL)
-
-    private fun createClass(
-        irPackage: IrPackageFragment,
-        shortName: String,
-        classKind: ClassKind,
-        classModality: Modality
-    ): IrClass = irFactory.buildClass {
-        name = Name.identifier(shortName)
-        kind = classKind
-        modality = classModality
-    }.apply {
-        parent = irPackage
-        createImplicitParameterDeclarationWithWrappedDescriptor()
-    }
+    val monitorExit = irBuiltIns.findFunctions(
+        Name.identifier("monitorExit"), kotlinJvmInternalUnsafeFqn,
+    ).first()
 }

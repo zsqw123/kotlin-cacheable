@@ -27,7 +27,7 @@ class CacheableKCP : CompilerPluginRegistrar() {
     override val supportsK2: Boolean = true
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         CacheableIrGenerationExtension.register(this)
-        CacheableClassTransform.register(this, configuration)
+//        CacheableClassTransform.register(this, configuration)
     }
 }
 

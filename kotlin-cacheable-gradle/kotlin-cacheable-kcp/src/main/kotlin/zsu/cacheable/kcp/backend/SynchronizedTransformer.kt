@@ -2,12 +2,10 @@ package zsu.cacheable.kcp.backend
 
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.IrField
-import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
-import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.types.makeNullable
 
 class SynchronizedTransformer(
@@ -28,7 +26,7 @@ class SynchronizedTransformer(
 
         val newBody = funcBuilder.irBlockBody {
             checkNullAndInitial(
-                functionThisReceiver, synchronizedInitial(originFunction, functionThisReceiver),
+                functionThisReceiver, synchronizedInitial(functionThisReceiver),
             )
         }
         originFunction.body = newBody
@@ -44,30 +42,39 @@ class SynchronizedTransformer(
     )
 
     private fun IrBuilderWithScope.synchronizedInitial(
-        callFrom: IrFunction,
         functionThisReceiver: IrGetValue,
-    ): IrReturn = irCall(synchronizedFunction).apply {
-        putTypeArgument(0, functionType)
-        // put lock
-        putValueArgument(0, functionThisReceiver) // synchronized(this)
+    ): IrExpression = irBlock {
+        val lock = createTmpVariable(functionThisReceiver, "lock")
+        // monitorEnter
+        +irCall(
+            cacheableSymbols.monitorEnter, irBuiltIns.unitType,
+            valueArgumentsCount = 1, typeArgumentsCount = 0,
+        ).apply {
+            putValueArgument(0, irGet(lock))
+        }
+
         // re-check null and normal initial
-        putValueArgument(1, irBlock { // synchronized(this) {}
-            resultType = functionType
-            val cachedNowVal = createCachedNowVal(functionThisReceiver)
-            // get current cached first
-            +cachedNowVal
-            // returns cache if not null
-            +irIfNull(
-                functionType,
-                irGet(cachedNowVal),
-                irGet(cachedNowVal),
-                irGet(cachedNowVal),
-            ).let { irReturn(it) }
-//            checkNullAndInitial(
-//                functionThisReceiver, normalInitial(functionThisReceiver)
-//            )
-        })
-    }.let { irReturn(it) }
+        val cachedNowVal = createCachedNowVal(functionThisReceiver)
+        // get current cached first
+        +cachedNowVal
+
+        // returns cache if not null
+        val rejudgeAndInitialize = irIfNull(
+            functionType,
+            irGet(cachedNowVal),
+            normalInitial(functionThisReceiver),
+            irReturn(irGet(cachedNowVal)),
+        )
+
+        // monitorExit
+        val monitorExit = irCall(
+            cacheableSymbols.monitorExit, irBuiltIns.unitType,
+            valueArgumentsCount = 1, typeArgumentsCount = 0,
+        ).apply {
+            putValueArgument(0, irGet(lock))
+        }
+        +irTry(irBuiltIns.unitType, rejudgeAndInitialize, emptyList(), monitorExit)
+    }
 
     private fun IrStatementsBuilder<*>.checkNullAndInitial(
         functionThisReceiver: IrGetValue, initialBlock: IrExpression,
@@ -93,6 +100,4 @@ class SynchronizedTransformer(
         +irSetField(functionThisReceiver, backendField, getResultVal)
         +irReturn(getResultVal)
     }
-
-    private val synchronizedFunction = cacheableSymbols.synchronizedFun
 }
