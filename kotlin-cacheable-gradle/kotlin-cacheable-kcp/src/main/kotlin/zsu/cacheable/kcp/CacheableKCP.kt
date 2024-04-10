@@ -19,15 +19,15 @@ import zsu.cacheable.kcp.bytecode.CacheableClassTransform
  *  issues when calling inline function.
  *
  * Overall, although using IR to generates something can make plugin comes to every platform, but
- * we are still hard to write such plugins. so maybe I will try later after kotlin 2.0 :(, maybe
- * Analysis API can solve my issues?
+ * some lock features may need some atomic library to create synchronized safely. So now we
+ * support only JVM.
  */
 @OptIn(ExperimentalCompilerApi::class)
 class CacheableKCP : CompilerPluginRegistrar() {
     override val supportsK2: Boolean = true
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         CacheableIrGenerationExtension.register(this)
-//        CacheableClassTransform.register(this, configuration)
+        CacheableClassTransform.register(this, configuration)
     }
 }
 

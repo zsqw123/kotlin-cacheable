@@ -32,7 +32,6 @@ class SimpleCacheableTest {
             private var b = 1
             @Cacheable
             fun bar(): Int {
-                synchronized(this) { ++a }
                 return ++b
             }
         }
