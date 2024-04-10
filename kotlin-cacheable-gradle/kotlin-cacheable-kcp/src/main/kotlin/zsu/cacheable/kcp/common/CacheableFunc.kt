@@ -21,27 +21,29 @@ data class CacheableFunc(
     val backendFieldName = Name.identifier("cachedField\$$funcIdentifier")
     val createdFlagFieldName = Name.identifier("cacheCreated\$$funcIdentifier")
 
-    @OptIn(ExperimentalContracts::class)
-    fun validation(parentClass: IrClass, function: IrFunction) {
-        contract {
-            returns() implies (function is IrSimpleFunction)
-        }
-        if (parentClass.isInterface) throw CacheableTransformError(
-            "@Cacheable not available for interface: ${parentClass.kotlinFqName.asString()}"
-        )
-        if (function !is IrSimpleFunction) throw CacheableTransformError(
-            "@Cacheable only supports simple functions, not support for current input: $function"
-        )
-        if (function.returnType.isNullable()) {
-            val typeStr = function.returnType.dumpKotlinLike()
-            val classFqn = parentClass.kotlinFqName.asString()
-            val funcName = function.name
-            throw CacheableTransformError(
-                "@Cacheable not support nullable type($typeStr) current: $classFqn#$funcName"
-            )
-        }
-        return
+}
+
+@OptIn(ExperimentalContracts::class)
+fun IrFunction.cacheableFuncValidation(parentClass: IrClass) {
+    contract {
+        returns() implies (this@cacheableFuncValidation is IrSimpleFunction)
     }
+    val function = this
+    if (parentClass.isInterface) throw CacheableTransformError(
+        "@Cacheable not available for interface: ${parentClass.kotlinFqName.asString()}"
+    )
+    if (function !is IrSimpleFunction) throw CacheableTransformError(
+        "@Cacheable only supports simple functions, not support for current input: $function"
+    )
+    if (function.returnType.isNullable()) {
+        val typeStr = this@cacheableFuncValidation.returnType.dumpKotlinLike()
+        val classFqn = parentClass.kotlinFqName.asString()
+        val funcName = this@cacheableFuncValidation.name
+        throw CacheableTransformError(
+            "@Cacheable not support nullable type($typeStr) current: $classFqn#$funcName"
+        )
+    }
+    return
 }
 
 private fun IrSimpleFunction.generateDesc(): String {

@@ -9,15 +9,17 @@ import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.builders.irExprBody
 import org.jetbrains.kotlin.ir.builders.irNull
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.types.isNullable
 import org.jetbrains.kotlin.ir.types.makeNullable
-import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
+import org.jetbrains.kotlin.ir.util.kotlinFqName
+import org.jetbrains.kotlin.ir.util.parentClassOrNull
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.name.Name
 import zsu.cacheable.CacheMode
 import zsu.cacheable.kcp.CACHEABLE_FQN
 import zsu.cacheable.kcp.CacheableTransformError
 import zsu.cacheable.kcp.builder
+import zsu.cacheable.kcp.common.cacheableFuncValidation
 import zsu.cacheable.kcp.readCacheable
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -66,21 +68,7 @@ class CacheableTransformer(
         contract {
             returns() implies (function is IrSimpleFunction)
         }
-        if (parentClass.isInterface) throw CacheableTransformError(
-            "@Cacheable not available for interface: ${parentClass.kotlinFqName.asString()}"
-        )
-        if (function !is IrSimpleFunction) throw CacheableTransformError(
-            "@Cacheable only supports simple functions, not support for current input: $function"
-        )
-        if (function.returnType.isNullable()) {
-            val typeStr = function.returnType.dumpKotlinLike()
-            val classFqn = parentClass.kotlinFqName.asString()
-            val funcName = function.name
-            throw CacheableTransformError(
-                "@Cacheable not support nullable type($typeStr) current: $classFqn#$funcName"
-            )
-        }
-        return
+        function.cacheableFuncValidation(parentClass)
     }
 
     private fun moveOriginFunction(
