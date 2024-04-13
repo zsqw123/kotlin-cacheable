@@ -1,5 +1,6 @@
 package zsu.cacheable.kcp
 
+import com.google.auto.service.AutoService
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.jvm.extensions.ClassGeneratorExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
@@ -23,6 +24,7 @@ import zsu.cacheable.kcp.bytecode.CacheableClassTransform
  * support only JVM.
  */
 @OptIn(ExperimentalCompilerApi::class)
+@AutoService(CompilerPluginRegistrar::class)
 class CacheableKCP : CompilerPluginRegistrar() {
     override val supportsK2: Boolean = true
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
