@@ -1,43 +1,47 @@
 package zsu.cacheable.kcp.backend
 
-import org.jetbrains.kotlin.ir.builders.IrBlockBuilder
-import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
-import org.jetbrains.kotlin.ir.builders.irCall
-import org.jetbrains.kotlin.ir.builders.irGet
-import org.jetbrains.kotlin.ir.declarations.IrField
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.IrSymbolOwner
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import zsu.cacheable.kcp.builder
 
 abstract class CacheableFunctionTransformer(
-    protected val cacheableSymbols: CacheableSymbols,
-    protected val originFunction: IrSimpleFunction,
-    protected val backendField: IrField,
-    protected val copiedFunction: IrSimpleFunction,
+    cacheableTransformContext: CacheableTransformContext,
 ) {
     abstract fun doTransform()
+
+    protected val cacheableSymbols = cacheableTransformContext.cacheableSymbols
+    protected val originFunction = cacheableTransformContext.originFunction
+    protected val backendField = cacheableTransformContext.backendField
+    protected val copiedFunction = cacheableTransformContext.copiedFunction
+    protected val createdFlagField = cacheableTransformContext.createdFlagField
+
+    protected val functionType = cacheableTransformContext.functionType
 
     protected val irBuiltIns = cacheableSymbols.irBuiltIns
 
     protected fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns)
 
     /** create a val which initialized by call origin function. */
-    protected fun IrBlockBuilder.valInitByOrigin(
-        callFrom: IrSimpleFunction,
-        callee: IrSimpleFunction,
-    ) = scope.createTemporaryVariable(
-        callCopiedFunction(callFrom, callee),
+    protected fun IrBlockBuilder.valInitByOrigin() = scope.createTemporaryVariable(
+        callCopiedFunction(),
         nameHint = "origin",
     )
 
-    private fun IrBuilderWithScope.callCopiedFunction(
-        callFrom: IrSimpleFunction,
-        callee: IrSimpleFunction,
-    ) = irCall(callee.symbol, callee.returnType).apply {
-        extensionReceiver = callFrom.extensionReceiverParameter?.let { irGet(it) }
-        dispatchReceiver = callFrom.dispatchReceiverParameter?.let { irGet(it) }
-        for ((index, irValueParameter) in callFrom.valueParameters.withIndex()) {
+    private fun IrBuilderWithScope.callCopiedFunction() = irCall(
+        copiedFunction.symbol, copiedFunction.returnType
+    ).apply {
+        extensionReceiver = originFunction.extensionReceiverParameter?.let { irGet(it) }
+        dispatchReceiver = originFunction.dispatchReceiverParameter?.let { irGet(it) }
+        for ((index, irValueParameter) in originFunction.valueParameters.withIndex()) {
             putValueArgument(index, irGet(irValueParameter))
         }
     }
+
+    protected fun IrBuilderWithScope.initializedVal(
+        receiver: IrExpression?,
+    ) = scope.createTmpVariable(
+        irType = irBuiltIns.booleanType, nameHint = "created", isMutable = true,
+        irExpression = irGetField(receiver, createdFlagField)
+    )
 }

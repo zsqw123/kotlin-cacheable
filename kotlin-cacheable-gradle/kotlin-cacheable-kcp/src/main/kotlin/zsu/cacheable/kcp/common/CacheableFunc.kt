@@ -4,8 +4,6 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.types.classFqName
-import org.jetbrains.kotlin.ir.types.isNullable
-import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.name.Name
@@ -13,20 +11,20 @@ import zsu.cacheable.kcp.CacheableTransformError
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-data class CacheableFunc(
+open class CacheableFunc(
     val origin: IrSimpleFunction,
 ) {
+    val returnType = origin.returnType
     private val funcIdentifier = "${origin.name.identifier}_${origin.generateDesc()}"
     val copiedOriginFunctionName = Name.identifier("cachedOrigin\$$funcIdentifier")
     val backendFieldName = Name.identifier("cachedField\$$funcIdentifier")
     val createdFlagFieldName = Name.identifier("cacheCreated\$$funcIdentifier")
-
 }
 
 @OptIn(ExperimentalContracts::class)
-fun IrFunction.cacheableFuncValidation(parentClass: IrClass) {
+fun IrFunction.validationForCacheable(parentClass: IrClass) {
     contract {
-        returns() implies (this@cacheableFuncValidation is IrSimpleFunction)
+        returns() implies (this@validationForCacheable is IrSimpleFunction)
     }
     val function = this
     if (parentClass.isInterface) throw CacheableTransformError(
@@ -35,14 +33,6 @@ fun IrFunction.cacheableFuncValidation(parentClass: IrClass) {
     if (function !is IrSimpleFunction) throw CacheableTransformError(
         "@Cacheable only supports simple functions, not support for current input: $function"
     )
-    if (function.returnType.isNullable()) {
-        val typeStr = this@cacheableFuncValidation.returnType.dumpKotlinLike()
-        val classFqn = parentClass.kotlinFqName.asString()
-        val funcName = this@cacheableFuncValidation.name
-        throw CacheableTransformError(
-            "@Cacheable not support nullable type($typeStr) current: $classFqn#$funcName"
-        )
-    }
     return
 }
 

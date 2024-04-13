@@ -1,24 +1,14 @@
 package zsu.cacheable.kcp.backend
 
 import org.jetbrains.kotlin.ir.builders.*
-import org.jetbrains.kotlin.ir.declarations.IrField
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.types.makeNullable
 
 class SynchronizedTransformer(
-    cacheableSymbols: CacheableSymbols,
-    originFunction: IrSimpleFunction,
-    backendField: IrField,
-    copiedFunction: IrSimpleFunction,
-) : CacheableFunctionTransformer(
-    cacheableSymbols, originFunction, backendField, copiedFunction,
-) {
-    private val functionType = originFunction.returnType
-
-
+    cacheableTransformContext: CacheableTransformContext,
+) : CacheableFunctionTransformer(cacheableTransformContext) {
     override fun doTransform() {
         // modify origin function, use origin function's symbol.
         val funcBuilder = originFunction.builder()
@@ -30,7 +20,6 @@ class SynchronizedTransformer(
             )
         }
         originFunction.body = newBody
-
     }
 
     private fun IrBuilderWithScope.createCachedNowVal(
@@ -94,7 +83,7 @@ class SynchronizedTransformer(
     private fun IrBuilderWithScope.normalInitial(
         functionThisReceiver: IrGetValue,
     ) = irBlock {
-        val calculatedVal = valInitByOrigin(originFunction, copiedFunction)
+        val calculatedVal = valInitByOrigin()
         +calculatedVal
         val getResultVal = irGet(calculatedVal)
         +irSetField(functionThisReceiver, backendField, getResultVal)

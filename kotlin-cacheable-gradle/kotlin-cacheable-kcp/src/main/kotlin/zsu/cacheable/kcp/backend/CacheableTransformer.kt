@@ -7,19 +7,20 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.declarations.addField
 import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.builders.irExprBody
-import org.jetbrains.kotlin.ir.builders.irNull
+import org.jetbrains.kotlin.ir.builders.irFalse
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.types.makeNullable
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
+import org.jetbrains.kotlin.ir.util.isStatic
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.parentClassOrNull
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import org.jetbrains.kotlin.name.Name
 import zsu.cacheable.CacheMode
 import zsu.cacheable.kcp.CACHEABLE_FQN
 import zsu.cacheable.kcp.CacheableTransformError
 import zsu.cacheable.kcp.builder
-import zsu.cacheable.kcp.common.cacheableFuncValidation
+import zsu.cacheable.kcp.common.CacheableFunc
+import zsu.cacheable.kcp.common.validationForCacheable
 import zsu.cacheable.kcp.readCacheable
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -47,20 +48,32 @@ class CacheableTransformer(
         )
         validation(parentClass, declaration)
 
-        val copiedFunction = moveOriginFunction(parentClass, declaration)
-        val backendField = addBackendField(parentClass, declaration)
+        val cacheableFunc = CacheableFunc(declaration)
+        val copiedFunction = moveOriginFunction(parentClass, cacheableFunc)
+        val backendField = addBackendField(parentClass, cacheableFunc)
+        val createdFlagField = addCreatedFlagField(parentClass, cacheableFunc)
+        val cacheableTransformContext = CacheableTransformContext(
+            symbols, declaration, backendField, copiedFunction, createdFlagField,
+        )
         // modify origin function
         when (cacheable.cacheMode) {
-            CacheMode.SYNCHRONIZED -> SynchronizedTransformer(
-                symbols, declaration, backendField, copiedFunction
-            )
-
-            CacheMode.NONE -> NormalTransformer(
-                symbols, declaration, backendField, copiedFunction
-            )
+            CacheMode.SYNCHRONIZED -> SynchronizedTransformer(cacheableTransformContext)
+            CacheMode.NONE -> NormalTransformer(cacheableTransformContext)
             else -> TODO() // unsupported now :{
         }.doTransform()
         return declaration
+    }
+
+    private fun addCreatedFlagField(
+        parentClass: IrClass, cacheableFunc: CacheableFunc
+    ) = parentClass.addField {
+        isStatic = cacheableFunc.origin.isStatic
+        isFinal = false
+        name = cacheableFunc.createdFlagFieldName
+        type = irBuiltIns.booleanType
+    }.also {
+        val builder = it.builder()
+        it.initializer = builder.irExprBody(builder.irFalse())
     }
 
     @OptIn(ExperimentalContracts::class)
@@ -68,33 +81,37 @@ class CacheableTransformer(
         contract {
             returns() implies (function is IrSimpleFunction)
         }
-        function.cacheableFuncValidation(parentClass)
+        function.validationForCacheable(parentClass)
     }
 
     private fun moveOriginFunction(
-        parentClass: IrClass, originFunction: IrSimpleFunction,
+        parentClass: IrClass, cacheableFunc: CacheableFunc,
     ) = parentClass.addFunction {
-        updateFrom(originFunction)
-        name = originFunction.name.cachedOriginFunctionName()
-        returnType = originFunction.returnType
+        updateFrom(cacheableFunc.origin)
+        name = cacheableFunc.copiedOriginFunctionName
+        returnType = cacheableFunc.returnType
     }.apply {
+        val originFunction = cacheableFunc.origin
+        dispatchReceiverParameter = originFunction.dispatchReceiverParameter
+        extensionReceiverParameter = originFunction.extensionReceiverParameter
+        contextReceiverParametersCount = originFunction.contextReceiverParametersCount
         copyParameterDeclarationsFrom(originFunction)
         body = originFunction.moveBodyTo(this)
     }
 
     private fun addBackendField(
-        parentClass: IrClass, originFunction: IrFunction,
+        parentClass: IrClass, cacheableFunc: CacheableFunc,
     ) = parentClass.addField {
+        isStatic = cacheableFunc.origin.isStatic
         isFinal = false
-        name = originFunction.name.cachedBackendFieldName()
-        type = originFunction.returnType.makeNullable()
+        name = cacheableFunc.backendFieldName
+        type = cacheableFunc.origin.returnType
     }.also {
         val builder = it.builder()
-        it.initializer = builder.irExprBody(builder.irNull())
+        val returnType = cacheableFunc.origin.returnType
+        val defaultExpr = IrConstImpl.defaultValueForType(builder.startOffset, builder.endOffset, returnType)
+        it.initializer = builder.irExprBody(defaultExpr)
     }
-
-    private fun Name.cachedOriginFunctionName() = Name.identifier("cachedOrigin$$identifier")
-    private fun Name.cachedBackendFieldName() = Name.identifier("cachedField$$identifier")
 
     private fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns)
 }

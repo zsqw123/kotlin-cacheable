@@ -15,7 +15,7 @@ import org.jetbrains.org.objectweb.asm.tree.FieldNode
 import org.jetbrains.org.objectweb.asm.tree.MethodNode
 import zsu.cacheable.kcp.CACHEABLE_FQN
 import zsu.cacheable.kcp.common.CacheableFunc
-import zsu.cacheable.kcp.common.cacheableFuncValidation
+import zsu.cacheable.kcp.common.validationForCacheable
 import zsu.cacheable.kcp.logger
 import zsu.cacheable.kcp.readCacheable
 
@@ -41,7 +41,7 @@ class CacheableClassGenerator(
         require(declaration is IrSimpleFunction && irClass != null) {
             "unsupported function: $name in class: ${irClass?.kotlinFqName}"
         }
-        declaration.cacheableFuncValidation(irClass)
+        declaration.validationForCacheable(irClass)
 
         // create generator
         val originMethodNode = MethodNode(
