@@ -79,12 +79,16 @@ if (needPublish) {
         }
 
         // Configure all publications
-        publications.withType<MavenPublication> {
-            // Stub javadoc.jar artifact
-            artifact(javadocJar.get()) {
-                classifier = "javadoc"
+        afterEvaluate {
+            publications.withType<MavenPublication> {
+                // Stub javadoc.jar artifact
+                if (artifacts.none { it.classifier == "javadoc" }) artifact(javadocJar.get()) {
+                    classifier = "javadoc"
+                }
             }
+        }
 
+        publications.withType<MavenPublication> {
             // Provide artifacts information requited by Maven Central
             pom {
                 name.set("kotlin-cacheable")

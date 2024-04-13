@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
-//    id("insidePublish")
     id("com.gradle.plugin-publish") version "1.2.1"
+    id("insidePublish")
 }
 
 repositories {
