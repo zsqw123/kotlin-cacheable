@@ -14,11 +14,5 @@ enum class CacheMode {
      * if the instance is accessed from multiple threads, its behavior is undefined.
      */
     NONE,
-
-    /**
-     * Calculate value during compile time. only available for static functions with no arguments,
-     * e.g. [JvmStatic] marked functions and no arguments.
-     */
-    COMPILE_TIME,
 }
 

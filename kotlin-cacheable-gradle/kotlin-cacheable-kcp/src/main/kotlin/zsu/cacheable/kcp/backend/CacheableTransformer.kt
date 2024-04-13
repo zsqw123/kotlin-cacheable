@@ -59,7 +59,6 @@ class CacheableTransformer(
         declaration.body = when (cacheable.cacheMode) {
             CacheMode.SYNCHRONIZED -> SynchronizedTransformer(cacheableTransformContext)
             CacheMode.NONE -> NormalTransformer(cacheableTransformContext)
-            else -> TODO() // unsupported now :{
         }.doTransform()
 
         return declaration
