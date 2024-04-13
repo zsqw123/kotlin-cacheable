@@ -1,6 +1,31 @@
 # kotlin-cacheable
 
+## Apply plugin
 
+```kotlin
+// Using the plugins DSL
+plugins {
+    id("host.bytedance.kotlin-cacheable") version "<latest>"
+}
+
+// or using legacy plugin application
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath("host.bytedance:kotlin-cacheable-gradle:<latest>")
+    }
+}
+
+apply(plugin = "host.bytedance.kotlin-cacheable")
+```
+
+The plugin will be published both **gradle plugin portal** and **maven central**.
+
+- maven central: [![Maven Central](https://img.shields.io/maven-central/v/host.bytedance/kotlin-cacheable-gradle)](https://central.sonatype.com/artifact/host.bytedance/kotlin-cacheable-gradle)
+- gradle plugin portal: [![Gradle Plugin Portal Version](https://img.shields.io/gradle-plugin-portal/v/host.bytedance.kotlin-cacheable)](https://plugins.gradle.org/plugin/host.bytedance.kotlin-cacheable)
 
 ## License
 
