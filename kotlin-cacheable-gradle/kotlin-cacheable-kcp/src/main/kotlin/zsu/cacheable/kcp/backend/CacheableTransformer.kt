@@ -56,11 +56,12 @@ class CacheableTransformer(
             symbols, parentClass, declaration, backendField, copiedFunction, createdFlagField,
         )
         // modify origin function
-        when (cacheable.cacheMode) {
+        declaration.body = when (cacheable.cacheMode) {
             CacheMode.SYNCHRONIZED -> SynchronizedTransformer(cacheableTransformContext)
             CacheMode.NONE -> NormalTransformer(cacheableTransformContext)
             else -> TODO() // unsupported now :{
         }.doTransform()
+
         return declaration
     }
 
@@ -113,5 +114,5 @@ class CacheableTransformer(
         it.initializer = builder.irExprBody(defaultExpr)
     }
 
-    private fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns)
+    private fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns, startOffset, endOffset)
 }

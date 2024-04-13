@@ -1,31 +1,26 @@
 package zsu.cacheable.kcp.backend
 
-import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
-import org.jetbrains.kotlin.ir.builders.irCall
-import org.jetbrains.kotlin.ir.builders.irGet
-import org.jetbrains.kotlin.ir.builders.irGetField
+import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.IrSymbolOwner
-import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrBody
 import zsu.cacheable.kcp.builder
 
 abstract class CacheableFunctionTransformer(
     cacheableTransformContext: CacheableTransformContext,
 ) {
     // modify origin function through this function
-    abstract fun doTransform()
+    abstract fun doTransform(): IrBody
 
     protected val cacheableSymbols = cacheableTransformContext.cacheableSymbols
     protected val parentClass = cacheableTransformContext.parentClass
     protected val originFunction = cacheableTransformContext.originFunction
     protected val backendField = cacheableTransformContext.backendField
-    protected val copiedFunction = cacheableTransformContext.copiedFunction
+    private val copiedFunction = cacheableTransformContext.copiedFunction
     protected val createdFlagField = cacheableTransformContext.createdFlagField
-
-    protected val functionType = cacheableTransformContext.functionType
 
     protected val irBuiltIns = cacheableSymbols.irBuiltIns
 
-    protected fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns)
+    protected fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns, startOffset, endOffset)
 
     /** create a val which initialized by call origin function. */
     protected fun IrBuilderWithScope.valInitByOrigin() = scope.createTemporaryVariable(
@@ -43,7 +38,24 @@ abstract class CacheableFunctionTransformer(
         }
     }
 
-    protected fun IrBuilderWithScope.getIsCreated(
-        receiver: IrExpression?,
-    ) = irGetField(receiver, createdFlagField)
+
+    val funcBuilder = originFunction.builder()
+    private val functionThisReceiver = originFunction.dispatchReceiverParameter?.let {
+        funcBuilder.irGet(it)
+    }
+    val getCachedField = funcBuilder.irGetField(functionThisReceiver, backendField)
+    val getIsCreated = funcBuilder.irGetField(functionThisReceiver, createdFlagField)
+
+    protected fun IrBlockBodyBuilder.computeCache() {
+        // val origin = originFunction()
+        val calculatedVal = valInitByOrigin()
+        +calculatedVal
+        // cachedField = origin
+        val getResultVal = irGet(calculatedVal)
+        +irSetField(functionThisReceiver, backendField, getResultVal)
+        // created = true
+        +irSetField(functionThisReceiver, createdFlagField, irTrue())
+        // return origin
+        +irReturn(getResultVal)
+    }
 }

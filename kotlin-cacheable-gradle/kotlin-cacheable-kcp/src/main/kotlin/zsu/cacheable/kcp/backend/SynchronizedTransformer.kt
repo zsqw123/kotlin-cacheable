@@ -1,6 +1,7 @@
 package zsu.cacheable.kcp.backend
 
 import org.jetbrains.kotlin.ir.builders.*
+import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrClassReference
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -23,32 +24,13 @@ class SynchronizedTransformer(
      * }
      * ```
      */
-    override fun doTransform() {
-        // modify origin function, use origin function's symbol.
-        val funcBuilder = originFunction.builder()
-        val functionThisReceiver = funcBuilder.irGet(originFunction.dispatchReceiverParameter!!)
-
-        val getCachedField = funcBuilder.irGetField(functionThisReceiver, backendField)
-        val getIsCreated = funcBuilder.getIsCreated(functionThisReceiver)
-
-        originFunction.body = funcBuilder.irBlockBody {
+    override fun doTransform(): IrBlockBody = funcBuilder.irBlockBody {
+        // if (created) return cachedField
+        +irIfThen(irBuiltIns.unitType, getIsCreated, irReturn(getCachedField))
+        +synchronizedBlock {
             // if (created) return cachedField
             +irIfThen(irBuiltIns.unitType, getIsCreated, irReturn(getCachedField))
-            // synchronized(this) {
-            +synchronizedBlock {
-                // if (created) return cachedField
-                irIfThen(irBuiltIns.unitType, getIsCreated, irReturn(getCachedField))
-                // val origin = originFunction()
-                val calculatedVal = valInitByOrigin()
-                +calculatedVal
-                // cachedField = origin
-                val getResultVal = irGet(calculatedVal)
-                +irSetField(functionThisReceiver, backendField, getResultVal)
-                // created = true
-                +irSetField(functionThisReceiver, createdFlagField, irTrue())
-                // return origin
-                +irReturn(getResultVal)
-            }
+            computeCache()
         }
     }
 
@@ -83,7 +65,6 @@ class SynchronizedTransformer(
             putValueArgument(0, lockExpression())
         }
 
-
         // monitorExit
         val monitorExit = irCall(
             cacheableSymbols.monitorExit, irBuiltIns.unitType,
@@ -91,6 +72,7 @@ class SynchronizedTransformer(
         ).apply {
             putValueArgument(0, lockExpression())
         }
+
         +irTry(
             irBuiltIns.unitType,
             irBlock { tryBlock() },

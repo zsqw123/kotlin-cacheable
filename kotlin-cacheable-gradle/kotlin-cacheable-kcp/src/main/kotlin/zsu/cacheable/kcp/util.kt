@@ -5,6 +5,8 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
+import org.jetbrains.kotlin.ir.builders.IrGeneratorContextBase
+import org.jetbrains.kotlin.ir.builders.Scope
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
@@ -13,13 +15,20 @@ import org.jetbrains.kotlin.util.DummyLogger
 import org.jetbrains.kotlin.util.Logger
 import zsu.cacheable.CacheMode
 import zsu.cacheable.Cacheable
-import zsu.cacheable.kcp.backend.CacheableIRBuilder
 
 const val CACHEABLE_FQN = "zsu.cacheable.Cacheable"
 
-fun IrSymbol.builder(irBuiltIns: IrBuiltIns): IrBuilderWithScope {
-    return CacheableIRBuilder(irBuiltIns, this)
+fun IrSymbol.builder(
+    irBuiltIns: IrBuiltIns, startOffset: Int, endOffset: Int
+): IrBuilderWithScope {
+    return CacheableIRBuilder(irBuiltIns, this, startOffset, endOffset)
 }
+
+private class CacheableIRBuilder(
+    irBuiltIns: IrBuiltIns, symbol: IrSymbol, startOffset: Int, endOffset: Int
+) : IrBuilderWithScope(
+    IrGeneratorContextBase(irBuiltIns), Scope(symbol), startOffset, endOffset,
+)
 
 class CacheableTransformError(message: String) : IllegalArgumentException(message)
 
