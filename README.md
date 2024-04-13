@@ -1,5 +1,25 @@
 # kotlin-cacheable
 
+## Usage
+
+Cache a function, compute functions only the first time.
+
+```kotlin
+class Foo {
+    private var bar: Int = 0
+    
+    @Cacheable
+    fun getBar() = ++bar
+}
+
+fun main() {
+    val foo = Foo()
+    println(foo.getBar()) // 1
+    println(foo.getBar()) // 1
+    println(foo.getBar()) // 1
+}
+```
+
 ## Apply plugin
 
 ```kotlin
