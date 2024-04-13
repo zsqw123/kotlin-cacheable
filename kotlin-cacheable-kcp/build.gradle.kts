@@ -10,6 +10,8 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":kotlin-cacheable-runtime"))
+
     ksp(D.autoServiceKsp)
     implementation(D.autoService)
     compileOnly(D.compilerEmbeddable)
