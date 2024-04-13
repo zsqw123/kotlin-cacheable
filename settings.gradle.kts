@@ -17,7 +17,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "kotlin-cacheable"
 includeBuild("insidePlugin")
-includeBuild("kotlin-cacheable-gradle")
+include("kotlin-cacheable-gradle")
+include(":kotlin-cacheable-kcp")
 
 include(":kotlin-cacheable-runtime")
 include(":demo")

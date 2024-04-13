@@ -3,9 +3,10 @@ package zsu.cacheable.kcp
 import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.plugin.*
 
+@Suppress("unused")
 class CacheableGradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
-        TODO("Not yet implemented")
+        return kotlinCompilation.target.project.provider { emptyList() }
     }
 
     override fun getCompilerPluginId(): String = "zsu.kotlin-cacheable-kcp"
