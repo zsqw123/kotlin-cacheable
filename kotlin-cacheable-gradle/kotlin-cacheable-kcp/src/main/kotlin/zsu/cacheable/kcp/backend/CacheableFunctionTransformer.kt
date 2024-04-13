@@ -8,6 +8,7 @@ import zsu.cacheable.kcp.builder
 abstract class CacheableFunctionTransformer(
     cacheableTransformContext: CacheableTransformContext,
 ) {
+    // modify origin function through this function
     abstract fun doTransform()
 
     protected val cacheableSymbols = cacheableTransformContext.cacheableSymbols
@@ -38,7 +39,7 @@ abstract class CacheableFunctionTransformer(
         }
     }
 
-    protected fun IrBuilderWithScope.initializedVal(
+    protected fun IrBuilderWithScope.valIsCreated(
         receiver: IrExpression?,
     ) = scope.createTmpVariable(
         irType = irBuiltIns.booleanType, nameHint = "created", isMutable = true,
