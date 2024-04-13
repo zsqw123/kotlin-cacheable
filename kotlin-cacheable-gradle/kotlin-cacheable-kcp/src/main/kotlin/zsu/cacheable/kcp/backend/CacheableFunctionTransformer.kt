@@ -1,6 +1,9 @@
 package zsu.cacheable.kcp.backend
 
-import org.jetbrains.kotlin.ir.builders.*
+import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
+import org.jetbrains.kotlin.ir.builders.irCall
+import org.jetbrains.kotlin.ir.builders.irGet
+import org.jetbrains.kotlin.ir.builders.irGetField
 import org.jetbrains.kotlin.ir.declarations.IrSymbolOwner
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import zsu.cacheable.kcp.builder
@@ -12,6 +15,7 @@ abstract class CacheableFunctionTransformer(
     abstract fun doTransform()
 
     protected val cacheableSymbols = cacheableTransformContext.cacheableSymbols
+    protected val parentClass = cacheableTransformContext.parentClass
     protected val originFunction = cacheableTransformContext.originFunction
     protected val backendField = cacheableTransformContext.backendField
     protected val copiedFunction = cacheableTransformContext.copiedFunction
@@ -24,7 +28,7 @@ abstract class CacheableFunctionTransformer(
     protected fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns)
 
     /** create a val which initialized by call origin function. */
-    protected fun IrBlockBuilder.valInitByOrigin() = scope.createTemporaryVariable(
+    protected fun IrBuilderWithScope.valInitByOrigin() = scope.createTemporaryVariable(
         callCopiedFunction(),
         nameHint = "origin",
     )
@@ -39,10 +43,7 @@ abstract class CacheableFunctionTransformer(
         }
     }
 
-    protected fun IrBuilderWithScope.valIsCreated(
+    protected fun IrBuilderWithScope.getIsCreated(
         receiver: IrExpression?,
-    ) = scope.createTmpVariable(
-        irType = irBuiltIns.booleanType, nameHint = "created", isMutable = true,
-        irExpression = irGetField(receiver, createdFlagField)
-    )
+    ) = irGetField(receiver, createdFlagField)
 }
