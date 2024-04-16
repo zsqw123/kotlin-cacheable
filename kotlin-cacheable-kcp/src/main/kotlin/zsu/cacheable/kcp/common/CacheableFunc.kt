@@ -15,10 +15,11 @@ open class CacheableFunc(
     val origin: IrSimpleFunction,
 ) {
     val returnType = origin.returnType
-    private val funcIdentifier = "${origin.name.identifier}_${origin.generateDesc()}"
+    private val funcIdentifier = origin.name.identifier
+    private val funcDesc = "${funcIdentifier}_${origin.generateDesc()}"
     val copiedOriginFunctionName = Name.identifier("cachedOrigin\$$funcIdentifier")
-    val backendFieldName = Name.identifier("cachedField\$$funcIdentifier")
-    val createdFlagFieldName = Name.identifier("cacheCreated\$$funcIdentifier")
+    val backendFieldName = Name.identifier("cachedField\$$funcDesc")
+    val createdFlagFieldName = Name.identifier("cacheCreated\$$funcDesc")
 }
 
 @OptIn(ExperimentalContracts::class)

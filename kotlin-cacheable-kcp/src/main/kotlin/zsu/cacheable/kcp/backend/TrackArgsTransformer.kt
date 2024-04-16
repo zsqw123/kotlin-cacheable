@@ -2,30 +2,39 @@ package zsu.cacheable.kcp.backend
 
 import org.jetbrains.kotlin.backend.jvm.fullValueParameterList
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
+import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.addField
-import org.jetbrains.kotlin.ir.builders.irExprBody
+import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.declarations.IrField
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrDynamicOperator
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrDynamicOperatorExpressionImpl
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
 import org.jetbrains.kotlin.ir.util.isStatic
 import org.jetbrains.kotlin.name.Name
 import zsu.cacheable.kcp.defaultValueForType
 
 class TrackArgsTransformer private constructor(cacheableTransformContext: CacheableTransformContext) :
     CacheableFunctionTransformer(cacheableTransformContext) {
-    private val args = originFunction.valueParameters
+    private val args = originFunction.fullValueParameterList
     override fun doTransform(): IrBody {
         if (args.isEmpty()) return transformTo(NormalTransformer)
+        // add old args variable for compare with new args
+        val oldArgs = addArgs()
+        // add compare functions
+        val compareFunction = addCompareFunction()
+        compareFunction.body = compareFunction.builder().irBlockBody {
+            +irReturn(compareArgsExpression(oldArgs))
+        }
+
     }
 
     private fun addArgs(): List<IrField> {
         val backendFieldName = backendField.name.identifier
         val originStatic = originFunction.isStatic
-        val args = originFunction.fullValueParameterList
         val result = ArrayList<IrField>(args.size)
         for ((i, valueParameter) in args.withIndex()) {
             val paramType = valueParameter.type
@@ -44,6 +53,18 @@ class TrackArgsTransformer private constructor(cacheableTransformContext: Cachea
         return result
     }
 
+    private fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
+        updateFrom(originFunction)
+        name = compareFunctionName
+        returnType = originFunction.returnType
+        visibility = DescriptorVisibilities.PRIVATE
+    }.apply {
+        dispatchReceiverParameter = originFunction.dispatchReceiverParameter
+        extensionReceiverParameter = originFunction.extensionReceiverParameter
+        contextReceiverParametersCount = originFunction.contextReceiverParametersCount
+        copyParameterDeclarationsFrom(originFunction)
+    }
+
     /**
      * ```
      * arg1 == oldArg1 &&
@@ -54,22 +75,28 @@ class TrackArgsTransformer private constructor(cacheableTransformContext: Cachea
     private fun IrBuilderWithScope.compareArgsExpression(
         oldArgs: List<IrField>,
     ): IrExpression {
-        val args = originFunction.fullValueParameterList
-        for (valueParameter in args) {
-            valueParameter
+        val thisReceiver = originFunction.dispatchReceiverParameter?.let { irGet(it) }
+        val firstOldArg = oldArgs.first()
+        val firstNewArg = args.first()
+        var expression = irGetField(thisReceiver, firstOldArg) eqWith irGet(firstNewArg)
+        var currentIndex = 1
+        while (currentIndex < args.size) {
+            val currentParam = args[currentIndex]
+            val singleJudgement = irGetField(thisReceiver, firstOldArg) eqWith irGet(currentParam)
+            expression = expression andWith singleJudgement
+            currentIndex++
         }
+        return expression
     }
 
-    private fun IrBuilderWithScope.eqExpr(
-        left: IrExpression, right: IrExpression
-    ): IrExpression = operatorExpr(
-        left, right, IrDynamicOperator.EQEQ, irBuiltIns.booleanType
+    context(IrBuilderWithScope)
+    private infix fun IrExpression.eqWith(right: IrExpression): IrExpression = operatorExpr(
+        this, right, IrDynamicOperator.EQEQ, irBuiltIns.booleanType
     )
 
-    private fun IrBuilderWithScope.andExpr(
-        left: IrExpression, right: IrExpression
-    ): IrExpression = operatorExpr(
-        left, right, IrDynamicOperator.ANDAND, irBuiltIns.booleanType
+    context(IrBuilderWithScope)
+    private infix fun IrExpression.andWith(right: IrExpression): IrExpression = operatorExpr(
+        this, right, IrDynamicOperator.ANDAND, irBuiltIns.booleanType
     )
 
     private fun IrBuilderWithScope.operatorExpr(
@@ -80,6 +107,8 @@ class TrackArgsTransformer private constructor(cacheableTransformContext: Cachea
         receiver = left
         arguments += right
     }
+
+    private val compareFunctionName = Name.identifier(originFunction.name.identifier + "\$compare")
 
     companion object : Creator {
         override fun create(context: CacheableTransformContext): CacheableFunctionTransformer {
