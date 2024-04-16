@@ -17,9 +17,23 @@ import org.jetbrains.kotlin.ir.util.isStatic
 import org.jetbrains.kotlin.name.Name
 import zsu.cacheable.kcp.defaultValueForType
 
-class TrackArgsTransformer private constructor(cacheableTransformContext: CacheableTransformContext) :
+open class TrackArgsTransformer protected constructor(cacheableTransformContext: CacheableTransformContext) :
     CacheableFunctionTransformer(cacheableTransformContext) {
     private val args = originFunction.fullValueParameterList
+
+    /**
+     * ```kotlin
+     * if (created && compareArgs(arg0, arg1, arg2)) return cachedField
+     * oldArg0 = arg0
+     * oldArg1 = arg1
+     * oldArg2 = arg2
+     * return computeCache(arg0, arg1, arg2)
+     * ```
+     */
+    open fun modifyBody(): IrBody {
+
+    }
+
     override fun doTransform(): IrBody {
         if (args.isEmpty()) return transformTo(NormalTransformer)
         // add old args variable for compare with new args
@@ -29,10 +43,10 @@ class TrackArgsTransformer private constructor(cacheableTransformContext: Cachea
         compareFunction.body = compareFunction.builder().irBlockBody {
             +irReturn(compareArgsExpression(oldArgs))
         }
-
+        return modifyBody(compareFunction,)
     }
 
-    private fun addArgs(): List<IrField> {
+    protected fun addArgs(): List<IrField> {
         val backendFieldName = backendField.name.identifier
         val originStatic = originFunction.isStatic
         val result = ArrayList<IrField>(args.size)
@@ -53,7 +67,7 @@ class TrackArgsTransformer private constructor(cacheableTransformContext: Cachea
         return result
     }
 
-    private fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
+    protected fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
         updateFrom(originFunction)
         name = compareFunctionName
         returnType = originFunction.returnType
