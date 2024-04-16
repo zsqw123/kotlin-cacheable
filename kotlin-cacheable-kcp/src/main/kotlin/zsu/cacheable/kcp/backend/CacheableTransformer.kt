@@ -3,40 +3,37 @@ package zsu.cacheable.kcp.backend
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
 import org.jetbrains.kotlin.backend.jvm.codegen.AnnotationCodegen.Companion.annotationClass
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.declarations.addField
 import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.builders.irExprBody
 import org.jetbrains.kotlin.ir.builders.irFalse
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
 import org.jetbrains.kotlin.ir.util.isStatic
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.parentClassOrNull
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import zsu.cacheable.CacheMode
-import zsu.cacheable.kcp.CACHEABLE_FQN
-import zsu.cacheable.kcp.CacheableTransformError
-import zsu.cacheable.kcp.builder
+import zsu.cacheable.kcp.*
 import zsu.cacheable.kcp.common.CacheableFunc
 import zsu.cacheable.kcp.common.validationForCacheable
-import zsu.cacheable.kcp.readCacheable
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 class CacheableTransformer(
     private val moduleFragment: IrModuleFragment,
-    pluginContext: IrPluginContext
+    private val pluginContext: IrPluginContext
 ) : IrElementTransformer<Any?> {
     private val irBuiltIns = pluginContext.symbols.irBuiltIns
+    private val symbols = CacheableSymbols(moduleFragment, pluginContext)
 
     fun doTransform() {
         moduleFragment.transformChildren(this, null)
     }
 
     override fun visitFunction(declaration: IrFunction, data: Any?): IrStatement {
-        val symbols = CacheableSymbols(moduleFragment, irBuiltIns)
         val originLogic = super.visitFunction(declaration, data)
         val cacheable = declaration.annotations.firstOrNull {
             it.annotationClass.kotlinFqName.asString() == CACHEABLE_FQN
@@ -57,9 +54,11 @@ class CacheableTransformer(
         )
         // modify origin function
         declaration.body = when (cacheable.cacheMode) {
-            CacheMode.SYNCHRONIZED -> SynchronizedTransformer(cacheableTransformContext)
-            CacheMode.NONE -> NormalTransformer(cacheableTransformContext)
-        }.doTransform()
+            CacheMode.SYNCHRONIZED -> SynchronizedTransformer
+            CacheMode.TRACK_ARGS -> TrackArgsTransformer
+            CacheMode.TRACK_ARGS_SYNCHRONIZED -> TrackArgsSyncTransformer
+            CacheMode.NONE -> NormalTransformer
+        }.create(cacheableTransformContext).doTransform()
 
         return declaration
     }
@@ -71,8 +70,10 @@ class CacheableTransformer(
         isFinal = false
         name = cacheableFunc.createdFlagFieldName
         type = irBuiltIns.booleanType
+        visibility = DescriptorVisibilities.PRIVATE
     }.also {
         val builder = it.builder()
+        it.annotations += builder.volatileAnnotation(symbols)
         it.initializer = builder.irExprBody(builder.irFalse())
     }
 
@@ -90,6 +91,7 @@ class CacheableTransformer(
         updateFrom(cacheableFunc.origin)
         name = cacheableFunc.copiedOriginFunctionName
         returnType = cacheableFunc.returnType
+        visibility = DescriptorVisibilities.PRIVATE
     }.apply {
         val originFunction = cacheableFunc.origin
         dispatchReceiverParameter = originFunction.dispatchReceiverParameter
@@ -106,10 +108,11 @@ class CacheableTransformer(
         isFinal = false
         name = cacheableFunc.backendFieldName
         type = cacheableFunc.origin.returnType
+        visibility = DescriptorVisibilities.PRIVATE
     }.also {
         val builder = it.builder()
         val returnType = cacheableFunc.origin.returnType
-        val defaultExpr = IrConstImpl.defaultValueForType(builder.startOffset, builder.endOffset, returnType)
+        val defaultExpr = builder.defaultValueForType(returnType)
         it.initializer = builder.irExprBody(defaultExpr)
     }
 

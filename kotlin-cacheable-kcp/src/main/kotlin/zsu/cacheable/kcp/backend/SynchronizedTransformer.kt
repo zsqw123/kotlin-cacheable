@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.starProjectedType
 
-class SynchronizedTransformer(
+class SynchronizedTransformer private constructor(
     cacheableTransformContext: CacheableTransformContext,
 ) : CacheableFunctionTransformer(cacheableTransformContext) {
     /**
@@ -78,6 +78,10 @@ class SynchronizedTransformer(
             irBlock { tryBlock() },
             emptyList(), monitorExit
         )
+    }
+
+    companion object : Creator {
+        override fun create(context: CacheableTransformContext) = SynchronizedTransformer(context)
     }
 }
 

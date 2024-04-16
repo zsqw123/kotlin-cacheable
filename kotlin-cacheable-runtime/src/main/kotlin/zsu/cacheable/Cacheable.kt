@@ -10,6 +10,16 @@ enum class CacheMode {
     SYNCHRONIZED,
 
     /**
+     *
+     */
+    TRACK_ARGS,
+
+    /**
+     * [TRACK_ARGS], but compare operations will run in synchronized block.
+     */
+    TRACK_ARGS_SYNCHRONIZED,
+
+    /**
      * No locks are used to synchronize an access to the instance value;
      * if the instance is accessed from multiple threads, its behavior is undefined.
      */

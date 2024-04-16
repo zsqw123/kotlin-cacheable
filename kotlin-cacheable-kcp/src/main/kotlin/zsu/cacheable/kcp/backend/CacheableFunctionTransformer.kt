@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.ir.expressions.IrBody
 import zsu.cacheable.kcp.builder
 
 abstract class CacheableFunctionTransformer(
-    cacheableTransformContext: CacheableTransformContext,
+    private val cacheableTransformContext: CacheableTransformContext,
 ) {
     // modify origin function through this function
     abstract fun doTransform(): IrBody
@@ -57,5 +57,13 @@ abstract class CacheableFunctionTransformer(
         +irSetField(functionThisReceiver, createdFlagField, irTrue())
         // return origin
         +irReturn(getResultVal)
+    }
+
+    protected fun transformTo(another: Creator): IrBody {
+        return another.create(cacheableTransformContext).doTransform()
+    }
+
+    interface Creator {
+        fun create(context: CacheableTransformContext): CacheableFunctionTransformer
     }
 }

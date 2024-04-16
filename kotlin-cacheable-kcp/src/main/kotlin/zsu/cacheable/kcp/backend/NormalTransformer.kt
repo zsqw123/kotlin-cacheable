@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.ir.builders.irIfThen
 import org.jetbrains.kotlin.ir.builders.irReturn
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 
-class NormalTransformer(
+class NormalTransformer private constructor(
     context: CacheableTransformContext
 ) : CacheableFunctionTransformer(context) {
     /**
@@ -21,6 +21,12 @@ class NormalTransformer(
         // if (created) return cachedField
         +irIfThen(irBuiltIns.unitType, getIsCreated, irReturn(getCachedField))
         computeCache()
+    }
+
+    companion object : Creator {
+        override fun create(context: CacheableTransformContext): CacheableFunctionTransformer {
+            return NormalTransformer(context)
+        }
     }
 }
 

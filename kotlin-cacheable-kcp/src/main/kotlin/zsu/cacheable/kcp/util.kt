@@ -8,13 +8,19 @@ import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContextBase
 import org.jetbrains.kotlin.ir.builders.Scope
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
+import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.IrMessageLogger
 import org.jetbrains.kotlin.util.DummyLogger
 import org.jetbrains.kotlin.util.Logger
 import zsu.cacheable.CacheMode
 import zsu.cacheable.Cacheable
+import zsu.cacheable.kcp.backend.CacheableSymbols
 
 const val CACHEABLE_FQN = "zsu.cacheable.Cacheable"
 
@@ -60,3 +66,20 @@ val CompilerConfiguration.logger: Logger
             }
         }
     }
+
+fun IrBuilderWithScope.defaultValueForType(irType: IrType): IrExpression {
+    return IrConstImpl.defaultValueForType(startOffset, endOffset, irType)
+}
+
+fun IrBuilderWithScope.createAnnotation(
+    symbol: IrConstructorSymbol, type: IrType,
+) = IrConstructorCallImpl(
+    startOffset, endOffset, type, symbol,
+    0, 0, 0
+)
+
+fun IrBuilderWithScope.volatileAnnotation(
+    symbols: CacheableSymbols,
+): IrConstructorCall = createAnnotation(
+    symbols.volatileCallSymbol, symbols.volatileType
+)
