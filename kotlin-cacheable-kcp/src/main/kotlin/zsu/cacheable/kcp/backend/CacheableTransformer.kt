@@ -50,7 +50,8 @@ class CacheableTransformer(
         val backendField = addBackendField(parentClass, cacheableFunc)
         val createdFlagField = addCreatedFlagField(parentClass, cacheableFunc)
         val cacheableTransformContext = CacheableTransformContext(
-            symbols, parentClass, declaration, backendField, copiedFunction, createdFlagField,
+            symbols, parentClass, declaration,
+            backendField, copiedFunction, createdFlagField,
         )
         // modify origin function
         declaration.body = when (cacheable.cacheMode) {

@@ -1,13 +1,13 @@
 package zsu.cacheable.kcp.backend
 
 import org.jetbrains.kotlin.ir.builders.irBlockBody
-import org.jetbrains.kotlin.ir.builders.irReturn
+import org.jetbrains.kotlin.ir.declarations.IrField
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrBody
 
-class TrackArgsSyncTransformer private constructor(context: CacheableTransformContext) :
-    TrackArgsTransformer(context) {
-    private val args = originFunction.valueParameters
-
+class TrackArgsSyncTransformer private constructor(
+    private val cacheableContext: CacheableTransformContext
+) : TrackArgsTransformer(cacheableContext) {
     /**
      * ```kotlin
      * if (created && compareArgs(arg0, arg1, arg2)) return cachedField
@@ -20,22 +20,14 @@ class TrackArgsSyncTransformer private constructor(context: CacheableTransformCo
      * }
      * ```
      */
-    override fun modifyBody(): IrBody {
-        return super.modifyBody()
-    }
-
-    override fun doTransform(): IrBody {
-        if (args.isEmpty()) return transformTo(SynchronizedTransformer)
-        // add old args variable for compare with new args
-        val oldArgs = addArgs()
-        // add compare functions
-        val compareFunction = addCompareFunction()
-        compareFunction.body = compareFunction.builder().irBlockBody {
-            +irReturn(compareArgsExpression(oldArgs))
-        }
-
-        funcBuilder.irBlockBody {
-
+    override fun modifyBody(
+        compareFunction: IrSimpleFunction, oldArgs: List<IrField>
+    ): IrBody = funcBuilder.irBlockBody {
+        +returnIfHitCache(compareFunction)
+        +synchronizedBlock(cacheableContext) {
+            +returnIfHitCache(compareFunction)
+            assignOldArgs(oldArgs)
+            computeCache()
         }
     }
 

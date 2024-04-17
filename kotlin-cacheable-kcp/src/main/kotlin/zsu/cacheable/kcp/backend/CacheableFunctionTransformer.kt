@@ -40,7 +40,7 @@ abstract class CacheableFunctionTransformer(
 
 
     val funcBuilder = originFunction.builder()
-    private val functionThisReceiver = originFunction.dispatchReceiverParameter?.let {
+    val functionThisReceiver = originFunction.dispatchReceiverParameter?.let {
         funcBuilder.irGet(it)
     }
     val getCachedField = funcBuilder.irGetField(functionThisReceiver, backendField)

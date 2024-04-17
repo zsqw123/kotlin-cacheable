@@ -30,8 +30,37 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
      * return computeCache(arg0, arg1, arg2)
      * ```
      */
-    open fun modifyBody(): IrBody {
+    open fun modifyBody(
+        compareFunction: IrSimpleFunction, oldArgs: List<IrField>
+    ): IrBody = funcBuilder.irBlockBody {
+        +returnIfHitCache(compareFunction)
+        assignOldArgs(oldArgs)
+        computeCache()
+    }
 
+    protected fun IrBlockBodyBuilder.assignOldArgs(oldArgs: List<IrField>) {
+        for ((i, oldArg) in oldArgs.withIndex()) {
+            +irSetField(functionThisReceiver, oldArg, irGet(args[i]))
+        }
+    }
+
+    // if (created && compareArgs(arg0, arg1, arg2)) return cachedField
+    protected fun IrBlockBodyBuilder.returnIfHitCache(
+        compareFunction: IrSimpleFunction,
+    ): IrExpression {
+        // compareArgs(arg0, arg1, arg2)
+        val callCompareFunction = irCall(compareFunction).apply {
+            extensionReceiver = originFunction.extensionReceiverParameter?.let { irGet(it) }
+            dispatchReceiver = originFunction.dispatchReceiverParameter?.let { irGet(it) }
+            for ((index, irValueParameter) in originFunction.valueParameters.withIndex()) {
+                putValueArgument(index, irGet(irValueParameter))
+            }
+        }
+        // if (created && compareArgs(arg0, arg1, arg2)) return cachedField
+        return irIfThen(
+            irBuiltIns.unitType, getIsCreated andWith callCompareFunction,
+            irReturn(getCachedField),
+        )
     }
 
     override fun doTransform(): IrBody {
@@ -43,10 +72,10 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
         compareFunction.body = compareFunction.builder().irBlockBody {
             +irReturn(compareArgsExpression(oldArgs))
         }
-        return modifyBody(compareFunction,)
+        return modifyBody(compareFunction, oldArgs)
     }
 
-    protected fun addArgs(): List<IrField> {
+    private fun addArgs(): List<IrField> {
         val backendFieldName = backendField.name.identifier
         val originStatic = originFunction.isStatic
         val result = ArrayList<IrField>(args.size)
@@ -67,7 +96,7 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
         return result
     }
 
-    protected fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
+    private fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
         updateFrom(originFunction)
         name = compareFunctionName
         returnType = originFunction.returnType
