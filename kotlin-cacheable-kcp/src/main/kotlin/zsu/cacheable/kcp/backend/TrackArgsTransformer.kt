@@ -8,10 +8,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.declarations.IrField
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrBody
-import org.jetbrains.kotlin.ir.expressions.IrDynamicOperator
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.impl.IrDynamicOperatorExpressionImpl
-import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
 import org.jetbrains.kotlin.ir.util.isStatic
 import org.jetbrains.kotlin.name.Name
@@ -70,7 +67,7 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
         // add compare functions
         val compareFunction = addCompareFunction()
         compareFunction.body = compareFunction.builder().irBlockBody {
-            +irReturn(compareArgsExpression(oldArgs))
+            +irReturn(compareArgsExpression(compareFunction, oldArgs))
         }
         return modifyBody(compareFunction, oldArgs)
     }
@@ -99,7 +96,7 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
     private fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
         updateFrom(originFunction)
         name = compareFunctionName
-        returnType = originFunction.returnType
+        returnType = irBuiltIns.booleanType
         visibility = DescriptorVisibilities.PRIVATE
     }.apply {
         dispatchReceiverParameter = originFunction.dispatchReceiverParameter
@@ -116,16 +113,18 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
      * ```
      */
     private fun IrBuilderWithScope.compareArgsExpression(
+        compareFunction: IrSimpleFunction,
         oldArgs: List<IrField>,
     ): IrExpression {
-        val thisReceiver = originFunction.dispatchReceiverParameter?.let { irGet(it) }
+        val compareFunctionArgs = compareFunction.valueParameters
+        val thisReceiver = compareFunction.dispatchReceiverParameter?.let { irGet(it) }
         val firstOldArg = oldArgs.first()
-        val firstNewArg = args.first()
+        val firstNewArg = compareFunctionArgs.first()
         var expression = irGetField(thisReceiver, firstOldArg) eqWith irGet(firstNewArg)
         var currentIndex = 1
-        while (currentIndex < args.size) {
-            val currentParam = args[currentIndex]
-            val singleJudgement = irGetField(thisReceiver, firstOldArg) eqWith irGet(currentParam)
+        while (currentIndex < compareFunctionArgs.size) {
+            val currentParam = compareFunctionArgs[currentIndex]
+            val singleJudgement = irGetField(thisReceiver, oldArgs[currentIndex]) eqWith irGet(currentParam)
             expression = expression andWith singleJudgement
             currentIndex++
         }
@@ -133,22 +132,13 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
     }
 
     context(IrBuilderWithScope)
-    private infix fun IrExpression.eqWith(right: IrExpression): IrExpression = operatorExpr(
-        this, right, IrDynamicOperator.EQEQ, irBuiltIns.booleanType
-    )
+    private infix fun IrExpression.eqWith(right: IrExpression): IrExpression {
+        return irEquals(this, right)
+    }
 
     context(IrBuilderWithScope)
-    private infix fun IrExpression.andWith(right: IrExpression): IrExpression = operatorExpr(
-        this, right, IrDynamicOperator.ANDAND, irBuiltIns.booleanType
-    )
-
-    private fun IrBuilderWithScope.operatorExpr(
-        left: IrExpression, right: IrExpression, operator: IrDynamicOperator, exprType: IrType,
-    ): IrExpression = IrDynamicOperatorExpressionImpl(
-        startOffset, endOffset, exprType, operator
-    ).apply {
-        receiver = left
-        arguments += right
+    private infix fun IrExpression.andWith(right: IrExpression): IrExpression {
+        return irIfThenElse(irBuiltIns.booleanType, this, right, irFalse())
     }
 
     private val compareFunctionName = Name.identifier(originFunction.name.identifier + "\$compare")
