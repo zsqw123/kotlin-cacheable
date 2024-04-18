@@ -22,6 +22,12 @@ fun main() {
 
 ## Apply plugin
 
+Recommended version alignments:
+
+| Kotlin | kotlin-cacheable-gradle |
+|--------|-------------------------|
+| 1.9.22 | \>= 0.0.5-beta          |
+
 ```kotlin
 // Using the plugins DSL
 plugins {
