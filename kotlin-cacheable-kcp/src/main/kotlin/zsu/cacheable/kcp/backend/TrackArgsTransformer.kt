@@ -61,7 +61,6 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
     }
 
     override fun doTransform(): IrBody {
-        if (args.isEmpty()) return transformTo(NormalTransformer)
         // add old args variable for compare with new args
         val oldArgs = addArgs()
         // add compare functions
@@ -145,6 +144,9 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
 
     companion object : Creator {
         override fun create(context: CacheableTransformContext): CacheableFunctionTransformer {
+            if (context.originFunction.fullValueParameterList.isEmpty()) {
+                return NormalTransformer.create(context)
+            }
             return TrackArgsTransformer(context)
         }
     }

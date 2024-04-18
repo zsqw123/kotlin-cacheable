@@ -47,6 +47,13 @@ The plugin will be published both **gradle plugin portal** and **maven central**
 - maven central: [![Maven Central](https://img.shields.io/maven-central/v/host.bytedance/kotlin-cacheable-gradle)](https://central.sonatype.com/artifact/host.bytedance/kotlin-cacheable-gradle)
 - gradle plugin portal: [![Gradle Plugin Portal Version](https://img.shields.io/gradle-plugin-portal/v/host.bytedance.kotlin-cacheable)](https://plugins.gradle.org/plugin/host.bytedance.kotlin-cacheable)
 
+## Advance Usages
+
+### Ignore thread-safety
+```kotlin
+
+```
+
 ## License
 
 ```

@@ -1,5 +1,6 @@
 package zsu.cacheable.kcp.backend
 
+import org.jetbrains.kotlin.backend.jvm.fullValueParameterList
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.declarations.IrField
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
@@ -32,7 +33,12 @@ class TrackArgsSyncTransformer private constructor(
     }
 
     companion object : Creator {
-        override fun create(context: CacheableTransformContext) = TrackArgsSyncTransformer(context)
+        override fun create(context: CacheableTransformContext): CacheableFunctionTransformer {
+            if (context.originFunction.fullValueParameterList.isEmpty()) {
+                return SynchronizedTransformer.create(context)
+            }
+            return TrackArgsSyncTransformer(context)
+        }
     }
 }
 

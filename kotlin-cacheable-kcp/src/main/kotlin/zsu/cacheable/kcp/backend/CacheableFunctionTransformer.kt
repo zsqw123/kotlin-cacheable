@@ -3,6 +3,7 @@ package zsu.cacheable.kcp.backend
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.IrSymbolOwner
 import org.jetbrains.kotlin.ir.expressions.IrBody
+import zsu.cacheable.kcp.backend.CacheableFunctionTransformer.Creator
 import zsu.cacheable.kcp.builder
 
 abstract class CacheableFunctionTransformer(
@@ -63,7 +64,7 @@ abstract class CacheableFunctionTransformer(
         return another.create(cacheableTransformContext).doTransform()
     }
 
-    interface Creator {
+    fun interface Creator {
         fun create(context: CacheableTransformContext): CacheableFunctionTransformer
     }
 }
