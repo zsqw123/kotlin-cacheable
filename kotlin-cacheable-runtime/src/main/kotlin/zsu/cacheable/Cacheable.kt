@@ -11,19 +11,19 @@ enum class CacheMode {
     NONE,
 
     /**
-     * Lock(containing class) is used to ensure that only a single thread can initialize the instance.
+     * Lock(containing class) is used to ensure that only a single thread can initialize the cache.
      */
     SYNCHRONIZED,
 
     /**
-     * track argument changes(comparing them using `equals` method), rebuild cache if there are any changes produced.
+     * Track argument changes(comparing them using `equals` method), rebuild cache if there are any changes produced.
+     * It will auto downgrade to [NONE] if this function has no value arguments.
      */
     TRACK_ARGS,
 
     /**
      * [TRACK_ARGS], but compare operations will run in synchronized block.
-     * @see [TRACK_ARGS]
-     * @see [SYNCHRONIZED]
+     * It will auto downgrade to [SYNCHRONIZED] if this function has no value arguments.
      */
     TRACK_ARGS_SYNCHRONIZED,
 }

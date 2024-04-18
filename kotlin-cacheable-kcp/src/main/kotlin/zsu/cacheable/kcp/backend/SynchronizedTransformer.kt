@@ -23,7 +23,7 @@ class SynchronizedTransformer private constructor(
     override fun doTransform(): IrBlockBody = funcBuilder.irBlockBody {
         // if (created) return cachedField
         +irIfThen(irBuiltIns.unitType, getIsCreated, irReturn(getCachedField))
-        +synchronizedBlock(cacheableTransformContext) {
+        synchronizedBlock(cacheableTransformContext) {
             // if (created) return cachedField
             +irIfThen(irBuiltIns.unitType, getIsCreated, irReturn(getCachedField))
             computeCache()

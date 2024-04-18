@@ -25,7 +25,7 @@ class TrackArgsSyncTransformer private constructor(
         compareFunction: IrSimpleFunction, oldArgs: List<IrField>
     ): IrBody = funcBuilder.irBlockBody {
         +returnIfHitCache(compareFunction)
-        +synchronizedBlock(cacheableContext) {
+        synchronizedBlock(cacheableContext) {
             +returnIfHitCache(compareFunction)
             assignOldArgs(oldArgs)
             computeCache()

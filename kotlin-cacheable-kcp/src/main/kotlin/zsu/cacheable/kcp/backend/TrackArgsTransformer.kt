@@ -35,14 +35,14 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
         computeCache()
     }
 
-    protected fun IrBlockBodyBuilder.assignOldArgs(oldArgs: List<IrField>) {
+    protected fun IrStatementsBuilder<*>.assignOldArgs(oldArgs: List<IrField>) {
         for ((i, oldArg) in oldArgs.withIndex()) {
             +irSetField(functionThisReceiver, oldArg, irGet(args[i]))
         }
     }
 
     // if (created && compareArgs(arg0, arg1, arg2)) return cachedField
-    protected fun IrBlockBodyBuilder.returnIfHitCache(
+    protected fun IrStatementsBuilder<*>.returnIfHitCache(
         compareFunction: IrSimpleFunction,
     ): IrExpression {
         // compareArgs(arg0, arg1, arg2)

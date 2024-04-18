@@ -12,19 +12,19 @@ abstract class CacheableFunctionTransformer(
     // modify origin function through this function
     abstract fun doTransform(): IrBody
 
-    protected val cacheableSymbols = cacheableTransformContext.cacheableSymbols
+    private val cacheableSymbols = cacheableTransformContext.cacheableSymbols
     protected val parentClass = cacheableTransformContext.parentClass
     protected val originFunction = cacheableTransformContext.originFunction
     protected val backendField = cacheableTransformContext.backendField
     private val copiedFunction = cacheableTransformContext.copiedFunction
-    protected val createdFlagField = cacheableTransformContext.createdFlagField
+    private val createdFlagField = cacheableTransformContext.createdFlagField
 
     protected val irBuiltIns = cacheableSymbols.irBuiltIns
 
     protected fun IrSymbolOwner.builder() = symbol.builder(irBuiltIns, startOffset, endOffset)
 
     /** create a val which initialized by call origin function. */
-    protected fun IrBuilderWithScope.valInitByOrigin() = scope.createTemporaryVariable(
+    private fun IrBuilderWithScope.valInitByOrigin() = scope.createTemporaryVariable(
         callCopiedFunction(),
         nameHint = "origin",
     )
@@ -47,7 +47,7 @@ abstract class CacheableFunctionTransformer(
     val getCachedField = funcBuilder.irGetField(functionThisReceiver, backendField)
     val getIsCreated = funcBuilder.irGetField(functionThisReceiver, createdFlagField)
 
-    protected fun IrBlockBodyBuilder.computeCache() {
+    protected fun IrStatementsBuilder<*>.computeCache() {
         // val origin = originFunction()
         val calculatedVal = valInitByOrigin()
         +calculatedVal
@@ -58,10 +58,6 @@ abstract class CacheableFunctionTransformer(
         +irSetField(functionThisReceiver, createdFlagField, irTrue())
         // return origin
         +irReturn(getResultVal)
-    }
-
-    protected fun transformTo(another: Creator): IrBody {
-        return another.create(cacheableTransformContext).doTransform()
     }
 
     fun interface Creator {

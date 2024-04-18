@@ -8,26 +8,20 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.starProjectedType
 
-object SynchronizedUtil {
-
-}
-
 /**
  * ```
- * {
- *   monitorEnter(this)
- *   try {
- *     tryBlock()
- *   } finally {
- *     monitorExit(this)
- *   }
+ * monitorEnter(this)
+ * try {
+ *   tryBlock()
+ * } finally {
+ *   monitorExit(this)
  * }
  * ```
  */
-fun IrBuilderWithScope.synchronizedBlock(
+fun IrBlockBodyBuilder.synchronizedBlock(
     context: CacheableTransformContext,
     tryBlock: IrBlockBuilder.() -> Unit,
-) = irBlock {
+) {
     val cacheableSymbols = context.cacheableSymbols
     val irBuiltIns = cacheableSymbols.irBuiltIns
     // monitorEnter
@@ -49,7 +43,8 @@ fun IrBuilderWithScope.synchronizedBlock(
     +irTry(
         irBuiltIns.unitType,
         irBlock { tryBlock() },
-        emptyList(), monitorExit
+        emptyList(),
+        irBlock { +monitorExit },
     )
 }
 
