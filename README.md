@@ -47,12 +47,48 @@ The plugin will be published both **gradle plugin portal** and **maven central**
 - maven central: [![Maven Central](https://img.shields.io/maven-central/v/host.bytedance/kotlin-cacheable-gradle)](https://central.sonatype.com/artifact/host.bytedance/kotlin-cacheable-gradle)
 - gradle plugin portal: [![Gradle Plugin Portal Version](https://img.shields.io/gradle-plugin-portal/v/host.bytedance.kotlin-cacheable)](https://plugins.gradle.org/plugin/host.bytedance.kotlin-cacheable)
 
-## Advance Usages
+## More Usages
 
-### Ignore thread-safety
-```kotlin
-
-```
+1. Always cache
+    ```kotlin
+    var a = 1
+    // ignores thread safety(no lock, better performance)
+    @Cacheable(CacheMode.NONE)
+    fun foo(): Int = ++a
+    // with lock
+    @Cacheable(CacheMode.SYNCHRONIZED)
+    fun bar(): Int = ++a
+    
+    // test function to call cacheable
+    fun test() {
+        // always same, compute only once
+        foo() // 2
+        foo() // 2
+        foo() // 2
+    }
+    ```
+2. Cache when input not changed. (default logic)
+    ```kotlin
+    var a = 0
+    
+    // [TRACK_ARGS_SYNCHRONIZED] is the default logic
+    @Cacheable(cacheMode = CacheMode.TRACK_ARGS_SYNCHRONIZED)
+    fun bar(param0: String, param1: Int): Int = ++a
+    
+    @Cacheable(cacheMode = CacheMode.TRACK_ARGS)
+    fun foo(param0: Int, param1: Boolean): Int = ++a
+    
+    // test function to call cacheable
+    // only changed when argument changed (through `equals`)
+    fun test() {
+        bar("a", 0) // 1
+        bar("a", 0) // 1
+        bar("b", 1) // 2
+        bar("b", 1) // 2
+        bar("c", 2) // 3
+        bar("c", 2) // 3
+    }
+    ```
 
 ## License
 
