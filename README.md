@@ -73,7 +73,7 @@ The plugin will be published both **gradle plugin portal** and **maven central**
         foo() // 2
     }
     ```
-2. Cache when input not changed. (default logic)
+2. Use cache when input not changed. (default logic)
     ```kotlin
     var a = 0
     
