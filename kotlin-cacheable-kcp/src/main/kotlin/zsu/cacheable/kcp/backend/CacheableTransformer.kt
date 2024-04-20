@@ -41,7 +41,8 @@ class CacheableTransformer(
 
         // assertions
         val parentClass = declaration.parentClassOrNull ?: throw CacheableTransformError(
-            "@Cacheable only available on class's function now, not support file level method currently."
+            "@Cacheable only available on class's function now, not support file level method currently. " +
+                    "Use object to achieve similar behaviors."
         )
         validation(parentClass, declaration)
 

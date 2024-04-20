@@ -11,7 +11,8 @@ class Sample {
 
 fun main() {
     val sample = Sample()
-    println(sample.call())
-    println(sample.call())
-    println(sample.call())
+    assertAndPrint(1, sample.call())
+    assertAndPrint(1, sample.call())
+    assertAndPrint(1, sample.call())
 }
+
