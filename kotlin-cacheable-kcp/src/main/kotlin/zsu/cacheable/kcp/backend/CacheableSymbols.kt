@@ -18,7 +18,7 @@ import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.starProjectedType
 import org.jetbrains.kotlin.ir.util.createImplicitParameterDeclarationWithWrappedDescriptor
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.name.JvmNames
+import org.jetbrains.kotlin.name.JvmStandardClassIds
 import org.jetbrains.kotlin.name.Name
 
 class CacheableSymbols(
@@ -30,9 +30,9 @@ class CacheableSymbols(
     private val kotlinJvmInternalUnsafeFqn = FqName("kotlin.jvm.internal.unsafe")
 
     val volatileCallSymbol: IrConstructorSymbol = pluginContext
-        .referenceConstructors(JvmNames.VOLATILE_ANNOTATION_CLASS_ID).first()
+        .referenceConstructors(JvmStandardClassIds.VOLATILE_ANNOTATION_CLASS_ID).first()
     val volatileType = pluginContext
-        .referenceClass(JvmNames.VOLATILE_ANNOTATION_CLASS_ID)!!.defaultType
+        .referenceClass(JvmStandardClassIds.VOLATILE_ANNOTATION_CLASS_ID)!!.defaultType
 
     val monitorEnter = irBuiltIns.findFunctions(
         Name.identifier("monitorEnter"), kotlinJvmInternalUnsafeFqn,

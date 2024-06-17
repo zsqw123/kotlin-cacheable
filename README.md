@@ -27,6 +27,7 @@ Recommended version alignments:
 | Kotlin | kotlin-cacheable-gradle |
 |--------|-------------------------|
 | 1.9.22 | \>= 0.0.5-beta          |
+| 2.0.0  | \>= 0.0.6-beta          |
 
 ```kotlin
 // Using the plugins DSL
