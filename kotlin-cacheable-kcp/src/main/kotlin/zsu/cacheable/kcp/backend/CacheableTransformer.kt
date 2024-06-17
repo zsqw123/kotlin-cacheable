@@ -90,7 +90,8 @@ class CacheableTransformer(
     private fun moveOriginFunction(
         parentClass: IrClass, cacheableFunc: CacheableFunc,
     ) = parentClass.addFunction {
-        updateFrom(cacheableFunc.origin)
+        origin = cacheableFunc.origin.origin
+        containerSource = cacheableFunc.origin.containerSource
         name = cacheableFunc.copiedOriginFunctionName
         returnType = cacheableFunc.returnType
         visibility = DescriptorVisibilities.PRIVATE
