@@ -15,7 +15,7 @@ open class CacheableFunc(
     val origin: IrSimpleFunction,
 ) {
     val returnType = origin.returnType
-    private val funcIdentifier = origin.name.identifier
+    private val funcIdentifier = origin.name.asStringStripSpecialMarkers()
     private val funcDesc = "${funcIdentifier}_${origin.generateDesc()}"
     val copiedOriginFunctionName = Name.identifier("cachedOrigin\$$funcIdentifier")
     val backendFieldName = Name.identifier("cachedField\$$funcDesc")
