@@ -8,7 +8,6 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import zsu.cacheable.kcp.backend.CacheableIrGenerationExtension
-import zsu.cacheable.kcp.bytecode.CacheableClassTransform
 
 /**
  * there are 3 ways to generate codes.
@@ -29,7 +28,6 @@ class CacheableKCP : CompilerPluginRegistrar() {
     override val supportsK2: Boolean = true
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         CacheableIrGenerationExtension.register(this)
-        CacheableClassTransform.register(this, configuration)
     }
 }
 

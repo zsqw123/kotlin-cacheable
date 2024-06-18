@@ -94,7 +94,6 @@ open class TrackArgsTransformer protected constructor(cacheableTransformContext:
 
     private fun addCompareFunction(): IrSimpleFunction = parentClass.addFunction {
         containerSource = originFunction.containerSource
-        origin = originFunction.origin
         name = compareFunctionName
         returnType = irBuiltIns.booleanType
         visibility = DescriptorVisibilities.PRIVATE

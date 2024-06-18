@@ -10,10 +10,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.builders.irExprBody
 import org.jetbrains.kotlin.ir.builders.irFalse
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.util.copyParameterDeclarationsFrom
-import org.jetbrains.kotlin.ir.util.isStatic
-import org.jetbrains.kotlin.ir.util.kotlinFqName
-import org.jetbrains.kotlin.ir.util.parentClassOrNull
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import zsu.cacheable.CacheMode
 import zsu.cacheable.kcp.*
@@ -35,6 +32,8 @@ class CacheableTransformer(
 
     override fun visitFunction(declaration: IrFunction, data: Any?): IrStatement {
         val originLogic = super.visitFunction(declaration, data)
+        // skip fake override functions
+        if (declaration.isFakeOverride) return originLogic
         val cacheable = declaration.annotations.firstOrNull {
             it.annotationClass.kotlinFqName.asString() == CACHEABLE_FQN
         }?.readCacheable() ?: return originLogic
@@ -90,7 +89,6 @@ class CacheableTransformer(
     private fun moveOriginFunction(
         parentClass: IrClass, cacheableFunc: CacheableFunc,
     ) = parentClass.addFunction {
-        origin = cacheableFunc.origin.origin
         containerSource = cacheableFunc.origin.containerSource
         name = cacheableFunc.copiedOriginFunctionName
         returnType = cacheableFunc.returnType
